@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Café Visits</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f5f5f5;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #2d3748;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+            padding: 1rem;
+        }
+
+        .cafe-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+            position: relative;
+        }
+
+        .cafe-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .cafe-image-container {
+            position: relative;
+            width: 100%;
+            height: 250px;
+        }
+
+        .cafe-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: filter 0.3s ease;
+        }
+
+        .unvisited .cafe-image {
+            filter: grayscale(100%);
+        }
+
+        .stars-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            color: gold;
+            font-size: 2rem;
+        }
+
+        .cafe-card:hover .stars-overlay {
+            opacity: 1;
+        }
+
+        .cafe-name {
+            padding: 1rem;
+            font-size: 1.1rem;
+            text-align: center;
+            color: #2d3748;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            font-size: 1.25rem;
+            color: #4a5568;
+        }
+
+        .star {
+            color: gold;
+            font-size: 24px;
+            margin: 0 2px;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .gallery {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Azam's NYC Cafe Hop</h1>
+    </div>
+
+    <div id="gallery" class="gallery">
+        <div class="loading">Loading café images...</div>
+    </div>
+
+    <script>
+        const BUCKET_URL = 'https://azamcafelistphotos.s3.us-east-1.amazonaws.com';
+        
+        // Function to parse cafe info from filename
+        function parseCafeInfo(filename) {
+            // Remove file extension
+            const nameWithoutExt = filename.replace(/\.[^/.]+$/, "");
+            
+            // Check if unvisited
+            if (nameWithoutExt.endsWith('_unvisited')) {
+                return {
+                    name: nameWithoutExt.replace('_unvisited', ''),
+                    visited: false,
+                    stars: 0
+                };
+            }
+            
+            // Extract stars for visited cafes
+            const match = nameWithoutExt.match(/_(\d+)_STARS$/);
+            if (match) {
+                return {
+                    name: nameWithoutExt.replace(/_\d+_STARS$/, ''),
+                    visited: true,
+                    stars: parseInt(match[1])
+                };
+            }
+            
+            // Default case
+            return {
+                name: nameWithoutExt,
+                visited: true,
+                stars: 0
+            };
+        }
+
+        // Function to generate star rating HTML
+        function generateStars(count) {
+            return '★'.repeat(count);
+        }
+
+        async function loadImages() {
+            const gallery = document.getElementById('gallery');
+            
+            try {
+                // Fetch the bucket listing XML
+                const response = await fetch(`${BUCKET_URL}?list-type=2`);
+                const data = await response.text();
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(data, "text/xml");
+                const contents = xmlDoc.getElementsByTagName("Contents");
+                
+                gallery.innerHTML = ''; // Clear loading message
+
+                // Process each object
+                Array.from(contents).forEach(item => {
+                    const key = item.getElementsByTagName("Key")[0].textContent;
+                    
+                    // Skip if not an image file
+                    if (!key.match(/\.(jpg|jpeg|png|gif)$/i)) return;
+                    
+                    const imageUrl = `${BUCKET_URL}/${key}`;
+                    const cafeInfo = parseCafeInfo(key);
+                    
+                    // Create and append cafe card
+                    const card = document.createElement('div');
+                    card.className = `cafe-card ${cafeInfo.visited ? 'visited' : 'unvisited'}`;
+                    
+                    const starsHtml = cafeInfo.visited ? `
+                        <div class="stars-overlay">
+                            ${generateStars(cafeInfo.stars)}
+                        </div>
+                    ` : '';
+
+                    card.innerHTML = `
+                        <div class="cafe-image-container">
+                            <img class="cafe-image" src="${imageUrl}" alt="${cafeInfo.name}" loading="lazy">
+                            ${starsHtml}
+                        </div>
+                        <div class="cafe-name">${cafeInfo.name}</div>
+                    `;
+                    gallery.appendChild(card);
+                });
+
+            } catch (error) {
+                console.error('Error loading images:', error);
+                gallery.innerHTML = '<div class="loading">Error loading images. Please try again later.</div>';
+            }
+        }
+
+        // Load images when page loads
+        document.addEventListener('DOMContentLoaded', loadImages);
+    </script>
+</body>
+</html>

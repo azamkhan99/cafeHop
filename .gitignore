@@ -1,0 +1,4 @@
+/.env
+/package/
+out.*
+bucket-name.txt
