@@ -28,6 +28,26 @@
             margin-bottom: 1rem;
         }
 
+        .toggle-container {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .toggle-button {
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            border: none;
+            border-radius: 5px;
+            background-color: #2d3748;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .toggle-button:hover {
+            background-color: #4a5568;
+        }
+
         .gallery {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -120,6 +140,9 @@
 <body>
     <div class="header">
         <h1>Azam's NYC Cafe Hop</h1>
+        <div class="toggle-container">
+            <button class="toggle-button" id="toggle-sort">Sort by Most Recent</button>
+        </div>
     </div>
 
     <div id="gallery" class="gallery">
@@ -128,7 +151,8 @@
 
     <script>
         const BUCKET_URL = 'https://azamcafelistphotos.s3.us-east-1.amazonaws.com';
-        
+        let currentSort = 'recent'; // Default sort by most recent
+
         // Function to parse cafe info from filename
         function parseCafeInfo(filename) {
             // Remove file extension
@@ -166,6 +190,16 @@
             return '★'.repeat(count);
         }
 
+        // Function to sort cafes by name
+        function sortByName(cafes) {
+            return cafes.sort((a, b) => a.name.localeCompare(b.name));
+        }
+
+        // Function to sort cafes by most recent (based on file upload time)
+        function sortByRecent(cafes) {
+            return cafes.sort((a, b) => new Date(b.lastModified) - new Date(a.lastModified));
+        }
+
         async function loadImages() {
             const gallery = document.getElementById('gallery');
             
@@ -179,6 +213,8 @@
                 
                 gallery.innerHTML = ''; // Clear loading message
 
+                const cafes = [];
+
                 // Process each object
                 Array.from(contents).forEach(item => {
                     const key = item.getElementsByTagName("Key")[0].textContent;
@@ -187,24 +223,36 @@
                     if (!key.match(/\.(jpg|jpeg|png|gif)$/i)) return;
                     
                     const imageUrl = `${BUCKET_URL}/${key}`;
+                    const lastModified = item.getElementsByTagName("LastModified")[0].textContent;
                     const cafeInfo = parseCafeInfo(key);
                     
-                    // Create and append cafe card
+                    cafes.push({
+                        ...cafeInfo,
+                        imageUrl,
+                        lastModified
+                    });
+                });
+
+                // Sort cafes based on current sort mode
+                const sortedCafes = currentSort === 'name' ? sortByName(cafes) : sortByRecent(cafes);
+
+                // Render sorted cafes
+                sortedCafes.forEach(cafe => {
                     const card = document.createElement('div');
-                    card.className = `cafe-card ${cafeInfo.visited ? 'visited' : 'unvisited'}`;
+                    card.className = `cafe-card ${cafe.visited ? 'visited' : 'unvisited'}`;
                     
-                    const starsHtml = cafeInfo.visited ? `
+                    const starsHtml = cafe.visited ? `
                         <div class="stars-overlay">
-                            ${generateStars(cafeInfo.stars)}
+                            ${generateStars(cafe.stars)}
                         </div>
                     ` : '';
 
                     card.innerHTML = `
                         <div class="cafe-image-container">
-                            <img class="cafe-image" src="${imageUrl}" alt="${cafeInfo.name}" loading="lazy">
+                            <img class="cafe-image" src="${cafe.imageUrl}" alt="${cafe.name}" loading="lazy">
                             ${starsHtml}
                         </div>
-                        <div class="cafe-name">${cafeInfo.name}</div>
+                        <div class="cafe-name">${cafe.name}</div>
                     `;
                     gallery.appendChild(card);
                 });
@@ -214,6 +262,13 @@
                 gallery.innerHTML = '<div class="loading">Error loading images. Please try again later.</div>';
             }
         }
+
+        // Toggle sort mode
+        document.getElementById('toggle-sort').addEventListener('click', () => {
+            currentSort = currentSort === 'recent' ? 'name' : 'recent';
+            document.getElementById('toggle-sort').textContent = currentSort === 'recent' ? 'Sort by Alphabetical' : 'Sort by Most Recent';
+            loadImages();
+        });
 
         // Load images when page loads
         document.addEventListener('DOMContentLoaded', loadImages);
