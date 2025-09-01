@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map View - My Café Visits</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.jsdelivr.net/npm/exif-js@2.3.0/exif.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        .header {
+            background: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #2d3748;
+            font-size: 1.8rem;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .nav-button {
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            border: none;
+            border-radius: 5px;
+            background-color: #2d3748;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .nav-button:hover {
+            background-color: #4a5568;
+        }
+
+        .nav-button.active {
+            background-color: #3182ce;
+        }
+
+        .map-container {
+            height: calc(100vh - 80px);
+            position: relative;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+
+        .visited {
+            background-color: #48bb78;
+        }
+
+        .unvisited {
+            background-color: #a0aec0;
+        }
+
+        .custom-popup {
+            text-align: center;
+        }
+
+        .popup-image {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+
+        .popup-name {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .popup-stars {
+            color: gold;
+            font-size: 1.2rem;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .nav-buttons {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .map-container {
+                height: calc(100vh - 120px);
+            }
+
+            .legend {
+                bottom: 10px;
+                right: 10px;
+                padding: 0.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>Azam's NYC Cafe Hop - Map View</h1>
+        <div class="nav-buttons">
+            <a href="index.html" class="nav-button">Gallery View</a>
+            <a href="map.html" class="nav-button active">Map View</a>
+        </div>
+    </div>
+
+    <div class="map-container">
+        <div class="loading" id="loading">Loading map and fetching GPS coordinates from S3 metadata...</div>
+        <div id="map"></div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color visited"></div>
+                <span>Visited Cafés</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color unvisited"></div>
+                <span>Unvisited Cafés</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const BUCKET_URL = 'https://azamcafelistphotos.s3.us-east-1.amazonaws.com';
+
+        // NYC coordinates (centered on Manhattan)
+        const NYC_CENTER = [40.7589, -73.9851];
+
+
+
+        // Function to parse cafe info from filename
+        function parseCafeInfo(filename) {
+            const nameWithoutExt = filename.replace(/\.[^/.]+$/, "");
+
+            if (nameWithoutExt.endsWith('_unvisited')) {
+                return {
+                    name: nameWithoutExt.replace('_unvisited', ''),
+                    visited: false,
+                    stars: 0
+                };
+            }
+
+            const match = nameWithoutExt.match(/_(\d+)_STARS$/);
+            if (match) {
+                return {
+                    name: nameWithoutExt.replace(/_\d+_STARS$/, ''),
+                    visited: true,
+                    stars: parseInt(match[1])
+                };
+            }
+
+            return {
+                name: nameWithoutExt,
+                visited: true,
+                stars: 0
+            };
+        }
+
+        // Function to generate star rating HTML
+        function generateStars(count) {
+            return '★'.repeat(count);
+        }
+
+
+
+        // Function to extract GPS coordinates from image EXIF data
+        function getGPSFromImage(imageUrl) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+
+                img.onload = function () {
+                    EXIF.getData(img, function () {
+                        const lat = EXIF.getTag(this, "GPSLatitude");
+                        const latRef = EXIF.getTag(this, "GPSLatitudeRef");
+                        const lon = EXIF.getTag(this, "GPSLongitude");
+                        const lonRef = EXIF.getTag(this, "GPSLongitudeRef");
+
+                        if (lat && lon && latRef && lonRef) {
+                            // Convert DMS to decimal degrees
+                            const latDecimal = convertDMSToDD(lat, latRef);
+                            const lonDecimal = convertDMSToDD(lon, lonRef);
+
+                            console.log(`Found GPS in EXIF: ${latDecimal}, ${lonDecimal}`);
+                            resolve([latDecimal, lonDecimal]);
+                        } else {
+                            console.log(`No GPS data found in EXIF for ${imageUrl}`);
+                            resolve(null);
+                        }
+                    });
+                };
+
+                img.onerror = function () {
+                    console.warn(`Failed to load image for EXIF extraction: ${imageUrl}`);
+                    resolve(null);
+                };
+
+                img.src = imageUrl;
+            });
+        }
+
+        // Function to convert DMS (Degrees, Minutes, Seconds) to Decimal Degrees
+        function convertDMSToDD(dms, ref) {
+            let dd = dms[0] + dms[1] / 60 + dms[2] / (60 * 60);
+            if (ref === "S" || ref === "W") {
+                dd = dd * -1;
+            }
+            return dd;
+        }
+
+        // Function to fetch GPS coordinates from S3 metadata
+        async function getS3Metadata(key) {
+            try {
+                const response = await fetch(`${BUCKET_URL}/${key}`, {
+                    method: 'HEAD',
+                    mode: 'cors'
+                });
+
+                if (response.ok) {
+                    const latitude = response.headers.get('x-amz-meta-latitude');
+                    const longitude = response.headers.get('x-amz-meta-longitude');
+
+                    if (latitude && longitude) {
+                        console.log(`✓ Found GPS metadata for ${key}: ${latitude}, ${longitude}`);
+                        return [parseFloat(latitude), parseFloat(longitude)];
+                    } else {
+                        console.log(`✗ No GPS metadata headers found for ${key}`);
+                        // Debug: log all available headers
+                        console.log('Available headers:', Array.from(response.headers.entries()));
+                    }
+                } else {
+                    console.warn(`HTTP error for ${key}: ${response.status} ${response.statusText}`);
+                }
+            } catch (error) {
+                console.warn(`Failed to fetch metadata for ${key}:`, error.message);
+                // If CORS fails, we might need to use a different approach
+                if (error.message.includes('CORS')) {
+                    console.log('CORS issue detected - will try EXIF extraction instead');
+                }
+            }
+            return null;
+        }
+
+        async function loadMap() {
+            // Initialize map
+            const map = L.map('map').setView(NYC_CENTER, 13);
+
+            // Add tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            try {
+                // Fetch the bucket listing XML
+                const response = await fetch(`${BUCKET_URL}?list-type=2`);
+                const data = await response.text();
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(data, "text/xml");
+                const contents = xmlDoc.getElementsByTagName("Contents");
+
+                // Hide loading message
+                document.getElementById('loading').style.display = 'none';
+
+                // Process each object and add markers
+                const cafePromises = Array.from(contents).map(async (item) => {
+                    const key = item.getElementsByTagName("Key")[0].textContent;
+
+                    // Skip if not an image file
+                    if (!key.match(/\.(jpg|jpeg|png|gif)$/i)) return null;
+
+                    const imageUrl = `${BUCKET_URL}/${key}`;
+                    const cafeInfo = parseCafeInfo(key);
+
+                    // Try to get GPS coordinates from S3 metadata first (most reliable)
+                    let coordinates = await getS3Metadata(key);
+
+                    // If no S3 metadata, try EXIF GPS data from image
+                    if (!coordinates) {
+                        coordinates = await getGPSFromImage(imageUrl);
+                    }
+
+                    // Skip this cafe if no GPS coordinates are found
+                    if (!coordinates) {
+                        console.log(`Skipping ${cafeInfo.name} - no GPS coordinates found`);
+                        return null;
+                    }
+
+                    // Create custom icon based on visit status
+                    const iconColor = cafeInfo.visited ? '#48bb78' : '#a0aec0';
+                    const customIcon = L.divIcon({
+                        className: 'custom-div-icon',
+                        html: `<div style="background-color: ${iconColor}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 10]
+                    });
+
+                    // Create popup content
+                    const starsHtml = cafeInfo.visited ?
+                        `<div class="popup-stars">${generateStars(cafeInfo.stars)}</div>` :
+                        '<div style="color: #a0aec0;">Not visited yet</div>';
+
+                    const popupContent = `
+                        <div class="custom-popup">
+                            <img src="${imageUrl}" alt="${cafeInfo.name}" class="popup-image">
+                            <div class="popup-name">${cafeInfo.name}</div>
+                            ${starsHtml}
+                        </div>
+                    `;
+
+                    return {
+                        coordinates,
+                        icon: customIcon,
+                        popup: popupContent
+                    };
+                });
+
+                // Wait for all metadata requests to complete
+                const cafeData = await Promise.all(cafePromises);
+
+                // Add markers to map
+                cafeData.forEach(cafe => {
+                    if (cafe) {
+                        L.marker(cafe.coordinates, { icon: cafe.icon })
+                            .addTo(map)
+                            .bindPopup(cafe.popup);
+                    }
+                });
+
+            } catch (error) {
+                console.error('Error loading map data:', error);
+                document.getElementById('loading').innerHTML = 'Error loading map data. Please try again later.';
+            }
+        }
+
+        // Load map when page loads
+        document.addEventListener('DOMContentLoaded', loadMap);
+    </script>
+</body>
+
+</html>

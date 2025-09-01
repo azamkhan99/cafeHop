@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -26,6 +27,34 @@
         .header h1 {
             font-size: 2.5rem;
             margin-bottom: 1rem;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .nav-button {
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            border: none;
+            border-radius: 5px;
+            background-color: #2d3748;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .nav-button:hover {
+            background-color: #4a5568;
+        }
+
+        .nav-button.active {
+            background-color: #3182ce;
         }
 
         .toggle-container {
@@ -137,9 +166,14 @@
         }
     </style>
 </head>
+
 <body>
     <div class="header">
         <h1>Azam's NYC Cafe Hop</h1>
+        <div class="nav-buttons">
+            <a href="index.html" class="nav-button active">Gallery View</a>
+            <a href="map.html" class="nav-button">Map View</a>
+        </div>
         <div class="toggle-container">
             <button class="toggle-button" id="toggle-sort">Sort by Most Recent</button>
         </div>
@@ -157,7 +191,7 @@
         function parseCafeInfo(filename) {
             // Remove file extension
             const nameWithoutExt = filename.replace(/\.[^/.]+$/, "");
-            
+
             // Check if unvisited
             if (nameWithoutExt.endsWith('_unvisited')) {
                 return {
@@ -166,7 +200,7 @@
                     stars: 0
                 };
             }
-            
+
             // Extract stars for visited cafes
             const match = nameWithoutExt.match(/_(\d+)_STARS$/);
             if (match) {
@@ -176,7 +210,7 @@
                     stars: parseInt(match[1])
                 };
             }
-            
+
             // Default case
             return {
                 name: nameWithoutExt,
@@ -202,7 +236,7 @@
 
         async function loadImages() {
             const gallery = document.getElementById('gallery');
-            
+
             try {
                 // Fetch the bucket listing XML
                 const response = await fetch(`${BUCKET_URL}?list-type=2`);
@@ -210,7 +244,7 @@
                 const parser = new DOMParser();
                 const xmlDoc = parser.parseFromString(data, "text/xml");
                 const contents = xmlDoc.getElementsByTagName("Contents");
-                
+
                 gallery.innerHTML = ''; // Clear loading message
 
                 const cafes = [];
@@ -218,14 +252,14 @@
                 // Process each object
                 Array.from(contents).forEach(item => {
                     const key = item.getElementsByTagName("Key")[0].textContent;
-                    
+
                     // Skip if not an image file
                     if (!key.match(/\.(jpg|jpeg|png|gif)$/i)) return;
-                    
+
                     const imageUrl = `${BUCKET_URL}/${key}`;
                     const lastModified = item.getElementsByTagName("LastModified")[0].textContent;
                     const cafeInfo = parseCafeInfo(key);
-                    
+
                     cafes.push({
                         ...cafeInfo,
                         imageUrl,
@@ -240,7 +274,7 @@
                 sortedCafes.forEach(cafe => {
                     const card = document.createElement('div');
                     card.className = `cafe-card ${cafe.visited ? 'visited' : 'unvisited'}`;
-                    
+
                     const starsHtml = cafe.visited ? `
                         <div class="stars-overlay">
                             ${generateStars(cafe.stars)}
@@ -274,4 +308,5 @@
         document.addEventListener('DOMContentLoaded', loadImages);
     </script>
 </body>
+
 </html>
