@@ -4,6 +4,8 @@ from datetime import datetime
 import requests
 import http.client
 import json
+from PIL import Image, ExifTags
+from io import BytesIO
 
 
 def get_place_id(api_key, place_name):
@@ -127,3 +129,57 @@ def download_most_recent_nyc_coffee_csv(access_key):
     except Exception as e:
         print(f"Error downloading file: {e}")
         raise
+
+
+def get_image_lat_long(img):
+    """
+    Get the latitude and longitude of an image using its EXIF data.
+    """
+    # Handle both bytes and BytesIO objects
+    if isinstance(img, bytes):
+        img = Image.open(BytesIO(img))
+    else:
+        img = Image.open(img)
+    exif = {ExifTags.TAGS.get(k, k): v for k, v in (img._getexif() or {}).items()}
+
+    gpsinfo = {}
+    if "GPSInfo" not in exif:
+        return None
+
+    for key in exif["GPSInfo"].keys():
+        decode = ExifTags.GPSTAGS.get(key, key)
+        gpsinfo[decode] = exif["GPSInfo"][key]
+
+    latitude = gpsinfo.get("GPSLatitude")
+    longitude = gpsinfo.get("GPSLongitude")
+    lat_ref = gpsinfo.get("GPSLatitudeRef")
+    lon_ref = gpsinfo.get("GPSLongitudeRef")
+
+    if not latitude or not longitude:
+        return None
+
+    lat = dms_to_decimal(latitude, lat_ref)
+    lon = dms_to_decimal(longitude, lon_ref)
+
+    return (float(lat), float(lon))
+
+
+def dms_to_decimal(dms, ref):
+    """
+    Convert GPS coordinates in DMS format to decimal degrees.
+
+    Parameters:
+        dms (tuple): (degrees, minutes, seconds) from Pillow GPSInfo
+        ref (str): 'N', 'S', 'E', or 'W'
+
+    Returns:
+        float: decimal degrees
+    """
+    degrees, minutes, seconds = dms
+    decimal = degrees + minutes / 60 + seconds / 3600
+
+    # South and West are negative
+    if ref in ["S", "W"]:
+        decimal *= -1
+
+    return decimal

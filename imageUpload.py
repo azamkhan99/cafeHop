@@ -3,11 +3,14 @@ import boto3
 import io
 from PIL import Image
 import os
+from dotenv import load_dotenv
 import requests
 from imageio import imread
 from pillow_heif import register_heif_opener
+from function.utils import get_image_lat_long
 
 register_heif_opener()
+load_dotenv()
 
 # AWS Credentials
 AWS_ACCESS_KEY = os.environ["AWS_ACCESS_KEY_ID"]
@@ -31,11 +34,15 @@ def convert_to_jpg(image):
     return img_byte_arr.getvalue()
 
 
-def upload_to_s3(file, filename):
+def upload_to_s3(file, filename, metadata):
     """Upload a file to S3."""
     try:
         s3_client.put_object(
-            Bucket=BUCKET_NAME, Key=filename, Body=file, ContentType="image/jpeg"
+            Bucket=BUCKET_NAME,
+            Key=filename,
+            Body=file,
+            ContentType="image/jpeg",
+            Metadata=metadata,
         )
         return f"https://{BUCKET_NAME}.s3.amazonaws.com/{filename}"
     except Exception as e:
@@ -48,7 +55,12 @@ def rename_convert_upload(image):
     filename = f"{filename}.jpg"
     if st.button("Upload"):
         jpg_image = convert_to_jpg(image)
-        s3_url = upload_to_s3(jpg_image, filename)
+        latitude, longitude = get_image_lat_long(jpg_image)
+        image_gps = {
+            "latitude": str(latitude),
+            "longitude": str(longitude),
+        }
+        s3_url = upload_to_s3(jpg_image, filename, image_gps)
         st.toast(f"Image uploaded successfully!")
         st.session_state.rename_convert_upload = s3_url
         st.rerun()
@@ -71,7 +83,6 @@ with st.container(border=True):
         if uploaded_file:
             image = Image.open(uploaded_file)
             rename_convert_upload(image)
-
             # st.image(image, caption="Uploaded Image")
             # st.write(st.session_state.rename_convert_upload)
     else:
