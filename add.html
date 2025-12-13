@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Café - My Café Visits</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f5f5f5;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #2d3748;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .nav-button {
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            border: none;
+            border-radius: 5px;
+            background-color: #2d3748;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .nav-button:hover {
+            background-color: #4a5568;
+        }
+
+        .nav-button.active {
+            background-color: #3182ce;
+        }
+
+        .form-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #2d3748;
+            font-weight: 500;
+        }
+
+        .form-group input[type="file"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            background-color: #f7fafc;
+            cursor: pointer;
+            transition: border-color 0.3s ease, background-color 0.3s ease;
+        }
+
+        .form-group input[type="file"]:hover {
+            border-color: #3182ce;
+            background-color: #edf2f7;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="number"],
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            color: #2d3748;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input[type="text"]:focus,
+        .form-group input[type="number"]:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3182ce;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .form-group input[type="number"] {
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+
+        .form-group input[type="number"]::-webkit-outer-spin-button,
+        .form-group input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            appearance: none;
+            margin: 0;
+        }
+
+        .submit-button {
+            width: 100%;
+            padding: 0.75rem 1.5rem;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 8px;
+            background-color: #3182ce;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            font-weight: 500;
+        }
+
+        .submit-button:hover {
+            background-color: #2c5aa0;
+        }
+
+        .submit-button:active {
+            transform: translateY(1px);
+        }
+
+        .submit-button:disabled {
+            background-color: #a0aec0;
+            cursor: not-allowed;
+        }
+
+        .file-preview {
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .file-preview img {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .file-name {
+            margin-top: 0.5rem;
+            color: #4a5568;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .form-container {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>Azam's NYC Cafe Hop</h1>
+        <div class="nav-buttons">
+            <a href="index.html" class="nav-button">Gallery View</a>
+            <a href="map.html" class="nav-button">Map View</a>
+            <a href="add.html" class="nav-button active">Add Café</a>
+        </div>
+    </div>
+
+    <div class="form-container">
+        <form id="cafe-form">
+            <div class="form-group">
+                <label for="photo">Photo</label>
+                <input type="file" accept="image/*" capture="environment" id="photo" required />
+                <div class="file-preview" id="file-preview"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="cafe">Café Name</label>
+                <input type="text" id="cafe" placeholder="Enter café name" required />
+            </div>
+
+            <div class="form-group">
+                <label for="rating">Rating (1-5)</label>
+                <input type="number" min="1" max="5" step="0.5" id="rating" placeholder="4.5" />
+            </div>
+
+            <div class="form-group">
+                <label for="notes">Notes</label>
+                <textarea id="notes" placeholder="Add any notes about this café..."></textarea>
+            </div>
+
+            <button type="submit" class="submit-button" id="submit-btn">Save</button>
+        </form>
+    </div>
+
+    <script>
+        // Preview uploaded image
+        document.getElementById('photo').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            const preview = document.getElementById('file-preview');
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    preview.innerHTML = `
+                        <img src="${e.target.result}" alt="Preview" />
+                        <div class="file-name">${file.name}</div>
+                    `;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.innerHTML = '';
+            }
+        });
+
+        // Handle form submission
+        document.getElementById('cafe-form').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const file = document.getElementById("photo").files[0];
+            const submitBtn = document.getElementById('submit-btn');
+
+            if (!file) {
+                alert("Please select a photo");
+                return;
+            }
+
+            // Disable button during upload
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Uploading...';
+
+            try {
+                // 1. get presigned URL
+                const res = await fetch("YOUR_API_GATEWAY_URL/upload-url", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ contentType: file.type })
+                });
+
+                if (!res.ok) {
+                    throw new Error('Failed to get upload URL');
+                }
+
+                const { uploadUrl, s3Key } = await res.json();
+
+                // 2. upload directly to S3
+                const uploadRes = await fetch(uploadUrl, {
+                    method: "PUT",
+                    headers: { "Content-Type": file.type },
+                    body: file
+                });
+
+                if (!uploadRes.ok) {
+                    throw new Error('Failed to upload to S3');
+                }
+
+                // 3. save metadata (later step)
+                alert("Uploaded successfully!");
+
+                // Reset form
+                document.getElementById('cafe-form').reset();
+                document.getElementById('file-preview').innerHTML = '';
+
+            } catch (error) {
+                console.error('Upload error:', error);
+                alert("Error uploading: " + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Save';
+            }
+        });
+    </script>
+</body>
+
+</html>
