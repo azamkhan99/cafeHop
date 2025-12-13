@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add Café - My Café Visits</title>
+    <script src="https://cdn.jsdelivr.net/npm/exif-js@2.3.0/exif.js"></script>
     <style>
         * {
             margin: 0;
@@ -246,6 +247,38 @@
             }
         });
 
+        // Function to convert DMS to decimal degrees
+        function convertDMSToDD(dms, ref) {
+            let dd = dms[0] + dms[1] / 60 + dms[2] / (60 * 60);
+            if (ref === "S" || ref === "W") {
+                dd = dd * -1;
+            }
+            return dd;
+        }
+
+        // Function to extract GPS coordinates from image file
+        function getGPSFromFile(file) {
+            return new Promise((resolve) => {
+                EXIF.getData(file, function () {
+                    const lat = EXIF.getTag(this, "GPSLatitude");
+                    const latRef = EXIF.getTag(this, "GPSLatitudeRef");
+                    const lon = EXIF.getTag(this, "GPSLongitude");
+                    const lonRef = EXIF.getTag(this, "GPSLongitudeRef");
+
+                    if (lat && lon && latRef && lonRef) {
+                        // Convert DMS to decimal degrees
+                        const latDecimal = convertDMSToDD(lat, latRef);
+                        const lonDecimal = convertDMSToDD(lon, lonRef);
+                        console.log(`Found GPS in EXIF: ${latDecimal}, ${lonDecimal}`);
+                        resolve({ latitude: latDecimal, longitude: lonDecimal });
+                    } else {
+                        console.log('No GPS data found in EXIF');
+                        resolve(null);
+                    }
+                });
+            });
+        }
+
         // Handle form submission
         document.getElementById('cafe-form').addEventListener('submit', async function (e) {
             e.preventDefault();
@@ -274,6 +307,9 @@
                     return;
                 }
 
+                // Extract GPS coordinates from image
+                const gpsData = await getGPSFromFile(file);
+
                 // 1. get presigned URL
                 const res = await fetch("https://1fanbo3g3k.execute-api.us-east-1.amazonaws.com/upload-url", {
                     method: "POST",
@@ -282,7 +318,9 @@
                         contentType: file.type,
                         cafeName: cafeName,
                         rating: rating ? parseFloat(rating) : null,
-                        notes: notes
+                        notes: notes,
+                        latitude: gpsData ? gpsData.latitude : null,
+                        longitude: gpsData ? gpsData.longitude : null
                     })
                 });
 

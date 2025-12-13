@@ -1,8 +1,77 @@
 import json
 import boto3
+import io
+from io import BytesIO
 
 s3 = boto3.client("s3")
 BUCKET = "azamcafelistphotos"
+
+def dms_to_decimal(dms, ref):
+    """
+    Convert GPS coordinates in DMS format to decimal degrees.
+
+    Parameters:
+        dms (tuple): (degrees, minutes, seconds) from Pillow GPSInfo
+        ref (str): 'N', 'S', 'E', or 'W'
+
+    Returns:
+        float: decimal degrees
+    """
+    degrees, minutes, seconds = dms
+    decimal = degrees + minutes / 60 + seconds / 3600
+
+    # South and West are negative
+    if ref in ["S", "W"]:
+        decimal *= -1
+
+    return decimal
+
+def convert_to_jpg(image):
+    """Convert an image to JPG format while keeping metadata.
+    
+    Note: Requires PIL/Pillow to be installed.
+    """
+    img_byte_arr = io.BytesIO()
+    if image.format != "JPEG":
+        img = image.convert("RGB")
+        img.save(img_byte_arr, format="JPEG", exif=image.info.get("exif"))
+    else:
+        image.save(img_byte_arr, format="JPEG", exif=image.info.get("exif"))
+    return img_byte_arr.getvalue()
+
+def get_image_lat_long(img):
+    """
+    Get the latitude and longitude of an image using its EXIF data.
+    
+    Note: Requires PIL/Pillow to be installed.
+    """
+    # Handle both bytes and BytesIO objects
+    if isinstance(img, bytes):
+        img = Image.open(BytesIO(img))
+    else:
+        img = Image.open(img)
+    exif = {ExifTags.TAGS.get(k, k): v for k, v in (img._getexif() or {}).items()}
+
+    gpsinfo = {}
+    if "GPSInfo" not in exif:
+        return None
+
+    for key in exif["GPSInfo"].keys():
+        decode = ExifTags.GPSTAGS.get(key, key)
+        gpsinfo[decode] = exif["GPSInfo"][key]
+
+    latitude = gpsinfo.get("GPSLatitude")
+    longitude = gpsinfo.get("GPSLongitude")
+    lat_ref = gpsinfo.get("GPSLatitudeRef")
+    lon_ref = gpsinfo.get("GPSLongitudeRef")
+
+    if not latitude or not longitude:
+        return None
+
+    lat = dms_to_decimal(latitude, lat_ref)
+    lon = dms_to_decimal(longitude, lon_ref)
+
+    return (float(lat), float(lon))
 
 def lambda_handler(event, context):
     try:
@@ -11,6 +80,8 @@ def lambda_handler(event, context):
         cafe_name = body.get("cafeName", "").strip()
         rating = body.get("rating")
         notes = body.get("notes", "").strip()
+        latitude = body.get("latitude")
+        longitude = body.get("longitude")
 
         # Validate cafe name is provided
         if not cafe_name:
@@ -54,7 +125,9 @@ def lambda_handler(event, context):
                 "Metadata": {
                     "cafe-name": cafe_name,
                     "notes": notes or "",
-                    "rating": str(rating_value) if rating_value else ""
+                    "rating": str(rating_value) if rating_value else "",
+                    "latitude": str(latitude) if latitude is not None else "",
+                    "longitude": str(longitude) if longitude is not None else ""
                 }
             },
             ExpiresIn=60
