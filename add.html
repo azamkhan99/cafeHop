@@ -259,23 +259,42 @@
         // Function to extract GPS coordinates from image file
         function getGPSFromFile(file) {
             return new Promise((resolve) => {
-                EXIF.getData(file, function () {
-                    const lat = EXIF.getTag(this, "GPSLatitude");
-                    const latRef = EXIF.getTag(this, "GPSLatitudeRef");
-                    const lon = EXIF.getTag(this, "GPSLongitude");
-                    const lonRef = EXIF.getTag(this, "GPSLongitudeRef");
+                // Create an Image element from the file
+                const img = new Image();
+                const objectUrl = URL.createObjectURL(file);
 
-                    if (lat && lon && latRef && lonRef) {
-                        // Convert DMS to decimal degrees
-                        const latDecimal = convertDMSToDD(lat, latRef);
-                        const lonDecimal = convertDMSToDD(lon, lonRef);
-                        console.log(`Found GPS in EXIF: ${latDecimal}, ${lonDecimal}`);
-                        resolve({ latitude: latDecimal, longitude: lonDecimal });
-                    } else {
-                        console.log('No GPS data found in EXIF');
-                        resolve(null);
-                    }
-                });
+                img.onload = function () {
+                    // Clean up the object URL
+                    URL.revokeObjectURL(objectUrl);
+
+                    // Extract EXIF data from the image
+                    EXIF.getData(img, function () {
+                        const lat = EXIF.getTag(this, "GPSLatitude");
+                        const latRef = EXIF.getTag(this, "GPSLatitudeRef");
+                        const lon = EXIF.getTag(this, "GPSLongitude");
+                        const lonRef = EXIF.getTag(this, "GPSLongitudeRef");
+
+                        if (lat && lon && latRef && lonRef) {
+                            // Convert DMS to decimal degrees
+                            const latDecimal = convertDMSToDD(lat, latRef);
+                            const lonDecimal = convertDMSToDD(lon, lonRef);
+                            console.log(`Found GPS in EXIF: ${latDecimal}, ${lonDecimal}`);
+                            resolve({ latitude: latDecimal, longitude: lonDecimal });
+                        } else {
+                            console.log('No GPS data found in EXIF');
+                            console.log('Available EXIF tags:', Object.keys(EXIF.getAllTags(this) || {}));
+                            resolve(null);
+                        }
+                    });
+                };
+
+                img.onerror = function () {
+                    URL.revokeObjectURL(objectUrl);
+                    console.warn('Failed to load image for EXIF extraction');
+                    resolve(null);
+                };
+
+                img.src = objectUrl;
             });
         }
 
