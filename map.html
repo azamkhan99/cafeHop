@@ -247,7 +247,7 @@
                             const latDecimal = convertDMSToDD(lat, latRef);
                             const lonDecimal = convertDMSToDD(lon, lonRef);
 
-                            console.log(`Found GPS in EXIF: ${latDecimal}, ${lonDecimal}`);
+                            console.log(`Found GPS in EXIF: ${latDecimal}, ${lonDecimal} for ${imageUrl}`);
                             resolve([latDecimal, lonDecimal]);
                         } else {
                             console.log(`No GPS data found in EXIF for ${imageUrl}`);
