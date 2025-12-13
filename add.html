@@ -264,7 +264,7 @@
 
             try {
                 // 1. get presigned URL
-                const res = await fetch("YOUR_API_GATEWAY_URL/upload-url", {
+                const res = await fetch("https://1fanbo3g3k.execute-api.us-east-1.amazonaws.com/upload-url", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ contentType: file.type })
