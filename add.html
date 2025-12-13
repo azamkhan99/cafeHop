@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add Café - My Café Visits</title>
-    <script src="https://cdn.jsdelivr.net/npm/exif-js@2.3.0/exif.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/lite.umd.js"></script>
     <style>
         * {
@@ -248,15 +247,6 @@
             }
         });
 
-        // Function to convert DMS to decimal degrees
-        function convertDMSToDD(dms, ref) {
-            let dd = dms[0] + dms[1] / 60 + dms[2] / (60 * 60);
-            if (ref === "S" || ref === "W") {
-                dd = dd * -1;
-            }
-            return dd;
-        }
-
         // Function to extract GPS coordinates from image file
         function getGPSFromFile(file) {
             return new Promise((resolve) => {
@@ -265,32 +255,24 @@
                 reader.onload = async function (e) {
                     const arrayBuffer = e.target.result;
 
-                    // Try exifr first (more reliable for binary data)
-                    if (typeof exifr !== 'undefined') {
-                        try {
-                            const exifData = await exifr.parse(arrayBuffer, { gps: true });
-                            console.log('exifr data:', exifData);
+                    try {
+                        const exifData = await exifr.parse(arrayBuffer, { gps: true });
+                        console.log('exifr data:', exifData);
 
-                            if (exifData && exifData.latitude !== undefined && exifData.longitude !== undefined) {
-                                // exifr returns coordinates already in decimal degrees
-                                console.log(`Found GPS in EXIF (exifr): ${exifData.latitude}, ${exifData.longitude}`);
-                                resolve({
-                                    latitude: exifData.latitude,
-                                    longitude: exifData.longitude
-                                });
-                                return;
-                            } else {
-                                console.log('No GPS data found in exifr, trying EXIF.js');
-                                tryEXIFJSMethod(file, resolve);
-                            }
-                        } catch (error) {
-                            console.error('Error with exifr:', error);
-                            console.log('Falling back to EXIF.js');
-                            tryEXIFJSMethod(file, resolve);
+                        if (exifData && exifData.latitude !== undefined && exifData.longitude !== undefined) {
+                            // exifr returns coordinates already in decimal degrees
+                            console.log(`Found GPS in EXIF: ${exifData.latitude}, ${exifData.longitude}`);
+                            resolve({
+                                latitude: exifData.latitude,
+                                longitude: exifData.longitude
+                            });
+                        } else {
+                            console.log('No GPS data found in EXIF');
+                            resolve(null);
                         }
-                    } else {
-                        console.log('exifr not available, trying EXIF.js');
-                        tryEXIFJSMethod(file, resolve);
+                    } catch (error) {
+                        console.error('Error reading EXIF data:', error);
+                        resolve(null);
                     }
                 };
 
@@ -301,53 +283,6 @@
 
                 reader.readAsArrayBuffer(file);
             });
-        }
-
-        // Helper function to try EXIF.js Image-based extraction
-        function tryEXIFJSMethod(file, resolve) {
-            const objectUrl = URL.createObjectURL(file);
-            const img = new Image();
-
-            img.onload = function () {
-                try {
-                    EXIF.getData(img, function () {
-                        const allTags = EXIF.getAllTags(this);
-                        console.log('All EXIF tags (EXIF.js):', allTags);
-
-                        const lat = EXIF.getTag(this, "GPSLatitude");
-                        const latRef = EXIF.getTag(this, "GPSLatitudeRef");
-                        const lon = EXIF.getTag(this, "GPSLongitude");
-                        const lonRef = EXIF.getTag(this, "GPSLongitudeRef");
-
-                        console.log('GPS data (EXIF.js):', { lat, latRef, lon, lonRef });
-
-                        if (lat && lon && latRef && lonRef) {
-                            const latDecimal = convertDMSToDD(lat, latRef);
-                            const lonDecimal = convertDMSToDD(lon, lonRef);
-                            console.log(`Found GPS in EXIF (EXIF.js): ${latDecimal}, ${lonDecimal}`);
-                            URL.revokeObjectURL(objectUrl);
-                            resolve({ latitude: latDecimal, longitude: lonDecimal });
-                        } else {
-                            console.log('No GPS data found in EXIF (EXIF.js method)');
-                            console.log('Available EXIF tags:', Object.keys(allTags || {}));
-                            URL.revokeObjectURL(objectUrl);
-                            resolve(null);
-                        }
-                    });
-                } catch (error) {
-                    console.error('Error reading EXIF data (EXIF.js):', error);
-                    URL.revokeObjectURL(objectUrl);
-                    resolve(null);
-                }
-            };
-
-            img.onerror = function () {
-                console.warn('Failed to load image for EXIF extraction');
-                URL.revokeObjectURL(objectUrl);
-                resolve(null);
-            };
-
-            img.src = objectUrl;
         }
 
         // Handle form submission
