@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add Café - My Café Visits</title>
     <script src="https://cdn.jsdelivr.net/npm/exif-js@2.3.0/exif.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/piexifjs@2.0.0/piexif.js"></script>
     <style>
         * {
             margin: 0;
@@ -259,53 +260,109 @@
         // Function to extract GPS coordinates from image file
         function getGPSFromFile(file) {
             return new Promise((resolve) => {
-                // Use object URL to preserve EXIF data
-                const objectUrl = URL.createObjectURL(file);
-                const img = new Image();
+                const reader = new FileReader();
 
-                img.onload = function () {
+                reader.onload = function (e) {
+                    const arrayBuffer = e.target.result;
+                    const bytes = new Uint8Array(arrayBuffer);
+                    const binary = '';
+                    for (let i = 0; i < bytes.length; i++) {
+                        binary += String.fromCharCode(bytes[i]);
+                    }
+
+                    // Try piexifjs first (more reliable for binary data)
                     try {
-                        EXIF.getData(img, function () {
-                            // Log all available EXIF data for debugging
-                            const allTags = EXIF.getAllTags(this);
-                            console.log('All EXIF tags:', allTags);
+                        const exifData = piexif.load(binary);
+                        console.log('piexif data:', exifData);
 
-                            const lat = EXIF.getTag(this, "GPSLatitude");
-                            const latRef = EXIF.getTag(this, "GPSLatitudeRef");
-                            const lon = EXIF.getTag(this, "GPSLongitude");
-                            const lonRef = EXIF.getTag(this, "GPSLongitudeRef");
+                        if (exifData && exifData.GPS) {
+                            const gps = exifData.GPS;
+                            console.log('GPS data from piexif:', gps);
 
-                            console.log('GPS data:', { lat, latRef, lon, lonRef });
+                            const lat = gps[piexif.GPSIFD.GPSLatitude];
+                            const latRef = gps[piexif.GPSIFD.GPSLatitudeRef];
+                            const lon = gps[piexif.GPSIFD.GPSLongitude];
+                            const lonRef = gps[piexif.GPSIFD.GPSLongitudeRef];
+
+                            console.log('GPS values:', { lat, latRef, lon, lonRef });
 
                             if (lat && lon && latRef && lonRef) {
-                                // Convert DMS to decimal degrees
-                                const latDecimal = convertDMSToDD(lat, latRef);
-                                const lonDecimal = convertDMSToDD(lon, lonRef);
-                                console.log(`Found GPS in EXIF: ${latDecimal}, ${lonDecimal}`);
-                                URL.revokeObjectURL(objectUrl);
+                                // piexif returns coordinates as [degrees, minutes, seconds] arrays
+                                const latRefStr = typeof latRef === 'string' ? latRef : String.fromCharCode(latRef);
+                                const lonRefStr = typeof lonRef === 'string' ? lonRef : String.fromCharCode(lonRef);
+                                const latDecimal = convertDMSToDD(lat, latRefStr);
+                                const lonDecimal = convertDMSToDD(lon, lonRefStr);
+                                console.log(`Found GPS in EXIF (piexif): ${latDecimal}, ${lonDecimal}`);
                                 resolve({ latitude: latDecimal, longitude: lonDecimal });
                             } else {
-                                console.log('No GPS data found in EXIF');
-                                console.log('Available EXIF tags:', Object.keys(allTags || {}));
-                                URL.revokeObjectURL(objectUrl);
-                                resolve(null);
+                                console.log('No GPS data found in piexif, trying EXIF.js');
+                                tryEXIFJSMethod(file, resolve);
                             }
-                        });
+                        } else {
+                            console.log('No GPS data in piexif, trying EXIF.js');
+                            tryEXIFJSMethod(file, resolve);
+                        }
                     } catch (error) {
-                        console.error('Error reading EXIF data:', error);
-                        URL.revokeObjectURL(objectUrl);
-                        resolve(null);
+                        console.error('Error with piexif:', error);
+                        console.log('Falling back to EXIF.js');
+                        tryEXIFJSMethod(file, resolve);
                     }
                 };
 
-                img.onerror = function () {
-                    console.warn('Failed to load image for EXIF extraction');
-                    URL.revokeObjectURL(objectUrl);
+                reader.onerror = function () {
+                    console.warn('Failed to read file as ArrayBuffer');
                     resolve(null);
                 };
 
-                img.src = objectUrl;
+                reader.readAsArrayBuffer(file);
             });
+        }
+
+        // Helper function to try EXIF.js Image-based extraction
+        function tryEXIFJSMethod(file, resolve) {
+            const objectUrl = URL.createObjectURL(file);
+            const img = new Image();
+
+            img.onload = function () {
+                try {
+                    EXIF.getData(img, function () {
+                        const allTags = EXIF.getAllTags(this);
+                        console.log('All EXIF tags (EXIF.js):', allTags);
+
+                        const lat = EXIF.getTag(this, "GPSLatitude");
+                        const latRef = EXIF.getTag(this, "GPSLatitudeRef");
+                        const lon = EXIF.getTag(this, "GPSLongitude");
+                        const lonRef = EXIF.getTag(this, "GPSLongitudeRef");
+
+                        console.log('GPS data (EXIF.js):', { lat, latRef, lon, lonRef });
+
+                        if (lat && lon && latRef && lonRef) {
+                            const latDecimal = convertDMSToDD(lat, latRef);
+                            const lonDecimal = convertDMSToDD(lon, lonRef);
+                            console.log(`Found GPS in EXIF (EXIF.js): ${latDecimal}, ${lonDecimal}`);
+                            URL.revokeObjectURL(objectUrl);
+                            resolve({ latitude: latDecimal, longitude: lonDecimal });
+                        } else {
+                            console.log('No GPS data found in EXIF (EXIF.js method)');
+                            console.log('Available EXIF tags:', Object.keys(allTags || {}));
+                            URL.revokeObjectURL(objectUrl);
+                            resolve(null);
+                        }
+                    });
+                } catch (error) {
+                    console.error('Error reading EXIF data (EXIF.js):', error);
+                    URL.revokeObjectURL(objectUrl);
+                    resolve(null);
+                }
+            };
+
+            img.onerror = function () {
+                console.warn('Failed to load image for EXIF extraction');
+                URL.revokeObjectURL(objectUrl);
+                resolve(null);
+            };
+
+            img.src = objectUrl;
         }
 
         // Handle form submission
