@@ -7,6 +7,7 @@
     <title>Map View - My Café Visits</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/exif-js@2.3.0/exif.js"></script>
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1490.0.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -188,6 +189,23 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         const BUCKET_URL = 'https://azamcafelistphotos.s3.us-east-1.amazonaws.com';
+        const BUCKET_NAME = 'azamcafelistphotos';
+        const AWS_REGION = 'us-east-1';
+
+        // Initialize AWS SDK S3 client
+        // Note: For production, configure credentials via:
+        // - AWS Cognito Identity Pool (recommended for browser)
+        // - IAM role (if running on EC2/Lambda)
+        // - Or use a backend API endpoint instead
+        AWS.config.update({
+            region: AWS_REGION
+            // Credentials will be loaded from:
+            // 1. AWS.config.credentials (if set manually)
+            // 2. Environment variables (if available)
+            // 3. IAM role (if running on EC2/Lambda)
+        });
+
+        const s3 = new AWS.S3();
 
         // NYC coordinates (centered on Manhattan)
         const NYC_CENTER = [40.7589, -73.9851];
@@ -274,34 +292,50 @@
             return dd;
         }
 
-        // Function to fetch GPS coordinates from S3 metadata
+        // Function to fetch GPS coordinates from S3 metadata using AWS SDK
+        // This mirrors the Python boto3 head_object call
         async function getS3Metadata(key) {
             try {
-                const response = await fetch(`${BUCKET_URL}/${key}`, {
-                    method: 'HEAD',
-                    mode: 'cors'
-                });
+                // Use AWS SDK to call headObject, similar to boto3 in Python
+                // s3.headObject() is equivalent to s3_client.head_object() in Python
+                const params = {
+                    Bucket: BUCKET_NAME,
+                    Key: key
+                };
 
-                if (response.ok) {
-                    const latitude = response.headers.get('x-amz-meta-latitude');
-                    const longitude = response.headers.get('x-amz-meta-longitude');
+                const response = await s3.headObject(params).promise();
+
+                // Access metadata from response, similar to Python's response['Metadata']
+                // In Python: response['Metadata'] contains custom metadata
+                // In JavaScript: response.Metadata contains the same data
+                if (response.Metadata) {
+                    // Metadata keys are lowercase in the response (AWS converts them)
+                    const latitude = response.Metadata.latitude;
+                    const longitude = response.Metadata.longitude;
 
                     if (latitude && longitude) {
                         console.log(`✓ Found GPS metadata for ${key}: ${latitude}, ${longitude}`);
                         return [parseFloat(latitude), parseFloat(longitude)];
                     } else {
-                        console.log(`✗ No GPS metadata headers found for ${key}`);
-                        // Debug: log all available headers
-                        console.log('Available headers:', Array.from(response.headers.entries()));
+                        console.log(`✗ No GPS metadata found in Metadata for ${key}`);
+                        // Debug: log all available metadata
+                        console.log('Available metadata:', response.Metadata);
                     }
                 } else {
-                    console.warn(`HTTP error for ${key}: ${response.status} ${response.statusText}`);
+                    console.log(`✗ No Metadata field in response for ${key}`);
+                    // Debug: log response structure (similar to Python's print(response))
+                    console.log('Response structure:', {
+                        hasMetadata: 'Metadata' in response,
+                        responseKeys: Object.keys(response),
+                        contentType: response.ContentType,
+                        contentLength: response.ContentLength
+                    });
                 }
             } catch (error) {
                 console.warn(`Failed to fetch metadata for ${key}:`, error.message);
-                // If CORS fails, we might need to use a different approach
-                if (error.message.includes('CORS')) {
-                    console.log('CORS issue detected - will try EXIF extraction instead');
+                // If credentials are missing, suggest using a backend API
+                if (error.code === 'CredentialsError' || error.message.includes('credentials')) {
+                    console.log('AWS credentials not configured - consider using a backend API endpoint');
                 }
             }
             return null;
