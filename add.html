@@ -263,11 +263,27 @@
             submitBtn.textContent = 'Uploading...';
 
             try {
+                const cafeName = document.getElementById("cafe").value.trim();
+                const rating = document.getElementById("rating").value;
+                const notes = document.getElementById("notes").value.trim();
+
+                if (!cafeName) {
+                    alert("Please enter a café name");
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Save';
+                    return;
+                }
+
                 // 1. get presigned URL
                 const res = await fetch("https://1fanbo3g3k.execute-api.us-east-1.amazonaws.com/upload-url", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ contentType: file.type })
+                    body: JSON.stringify({
+                        contentType: file.type,
+                        cafeName: cafeName,
+                        rating: rating ? parseFloat(rating) : null,
+                        notes: notes
+                    })
                 });
 
                 if (!res.ok) {
