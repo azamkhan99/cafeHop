@@ -1,0 +1,6 @@
+/.env
+/package/
+out.*
+bucket-name.txt
+__pycache__/
+*.pyc

@@ -18,6 +18,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Remove config.js from .gitignore for deployment
+        run: |
+          # Remove config.js from .gitignore BEFORE generating it
+          # This ensures the deployment action will include it
+          if [ -f .gitignore ]; then
+            # Remove both /config.js and config.js patterns
+            sed -i.bak '/^\/config\.js$/d; /^config\.js$/d' .gitignore || sed -i '' '/^\/config\.js$/d; /^config\.js$/d' .gitignore || true
+            echo "✅ Removed config.js from .gitignore"
+            echo "📋 Updated .gitignore:"
+            cat .gitignore
+          fi
+
       - name: Generate config.js from secrets
         run: |
           if [ -z "${{ secrets.API_GATEWAY_URL }}" ]; then
@@ -25,14 +37,19 @@ jobs:
             echo "Please go to Settings > Secrets and variables > Actions and add API_GATEWAY_URL"
             exit 1
           fi
-          cat > config.js << EOF
-          // Configuration file - DO NOT COMMIT THIS FILE
-          // This file is generated from GitHub Secrets during deployment
+          # Generate as app-config.js (not in .gitignore) so it gets deployed
+          # Then create symlink config.js for backward compatibility
+          cat > app-config.js << EOF
+          // Configuration file - Generated from GitHub Secrets during deployment
           
           window.APP_CONFIG = {
               API_GATEWAY_URL: '${{ secrets.API_GATEWAY_URL }}'
           };
           EOF
+          # Also create config.js (symlink or copy) for the HTML file
+          cp app-config.js config.js
+          chmod 644 app-config.js config.js
+          echo "✅ Generated app-config.js and config.js ($(wc -c < app-config.js) bytes)"
 
       - name: Verify config.js was generated
         run: |
@@ -48,15 +65,22 @@ jobs:
             exit 1
           fi
 
-      - name: List files to be deployed
+      - name: Verify config.js will be deployed
         run: |
+          echo "🔍 Final verification before deployment:"
+          echo "📁 Checking config.js:"
+          ls -la config.js 2>/dev/null && echo "✅ config.js exists" || echo "❌ config.js missing!"
+          echo ""
+          echo "🔍 Checking if config.js is ignored by git:"
+          git check-ignore -v config.js && echo "⚠️ WARNING: config.js is still ignored!" || echo "✅ config.js is NOT ignored - will be deployed"
+          echo ""
           echo "📦 Files that will be deployed:"
-          find . -type f -name "*.js" -o -name "*.html" | grep -v node_modules | head -20
+          find . -type f \( -name "*.js" -o -name "*.html" \) | grep -v node_modules | head -20
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./
-          exclude_assets: 'config.example.js,*.md,.gitignore'
+          exclude_assets: 'config.example.js'
           keep_files: false
