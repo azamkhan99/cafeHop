@@ -227,7 +227,7 @@
         </form>
     </div>
 
-    <script>
+    <!-- <script>
         // Preview uploaded image
         document.getElementById('photo').addEventListener('change', function (e) {
             const file = e.target.files[0];
@@ -362,7 +362,142 @@
                 submitBtn.textContent = 'Save';
             }
         });
+    </script> -->
+    <script>
+        const AUTH_LAMBDA_URL = "https://<auth-lambda-url>";        // replace with your Auth Lambda URL
+        const PRESIGN_LAMBDA_URL = "https://<presign-lambda-url>";  // replace with your Presign Lambda URL
+
+        let token = null; // Store JWT token in memory
+
+        // --- 1. Preview uploaded image ---
+        document.getElementById('photo').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            const preview = document.getElementById('file-preview');
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    preview.innerHTML = `
+                <img src="${e.target.result}" alt="Preview" />
+                <div class="file-name">${file.name}</div>
+            `;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.innerHTML = '';
+            }
+        });
+
+        // --- 2. Extract GPS coordinates ---
+        function getGPSFromFile(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = async function (e) {
+                    try {
+                        const exifData = await exifr.parse(e.target.result, { gps: true });
+                        if (exifData && exifData.latitude !== undefined && exifData.longitude !== undefined) {
+                            resolve({ latitude: exifData.latitude, longitude: exifData.longitude });
+                        } else {
+                            resolve(null);
+                        }
+                    } catch (err) {
+                        console.error('EXIF error:', err);
+                        resolve(null);
+                    }
+                };
+                reader.onerror = () => resolve(null);
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // --- 3. Get JWT token from Auth Lambda ---
+        async function getToken(password) {
+            const res = await fetch(AUTH_LAMBDA_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ password })
+            });
+            if (!res.ok) throw new Error("Auth failed");
+            const data = await res.json();
+            return data.token;
+        }
+
+        // --- 4. Get presigned URL ---
+        async function getPresignedUrl(uploadData) {
+            const res = await fetch(PRESIGN_LAMBDA_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify(uploadData)
+            });
+            if (!res.ok) throw new Error("Failed to get presigned URL");
+            return await res.json();
+        }
+
+        // --- 5. Handle form submission ---
+        document.getElementById('cafe-form').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const file = document.getElementById("photo").files[0];
+            const submitBtn = document.getElementById('submit-btn');
+            const cafeName = document.getElementById("cafe").value.trim();
+            const rating = document.getElementById("rating").value;
+            const notes = document.getElementById("notes").value.trim();
+            const password = document.getElementById("upload-password").value;
+
+            if (!file || !cafeName || !password) {
+                alert("Please select a photo, enter a café name, and provide the upload password.");
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Uploading...';
+
+            try {
+                // --- 1. Get token if not already ---
+                if (!token) {
+                    token = await getToken(password);
+                }
+
+                // --- 2. Extract GPS ---
+                const gpsData = await getGPSFromFile(file);
+
+                // --- 3. Get presigned URL ---
+                const uploadData = {
+                    contentType: file.type,
+                    cafeName,
+                    rating: rating ? parseFloat(rating) : null,
+                    notes,
+                    latitude: gpsData ? gpsData.latitude : null,
+                    longitude: gpsData ? gpsData.longitude : null
+                };
+                const { uploadUrl, s3Key } = await getPresignedUrl(uploadData);
+
+                // --- 4. Upload file to S3 ---
+                const uploadRes = await fetch(uploadUrl, {
+                    method: "PUT",
+                    headers: { "Content-Type": file.type },
+                    body: file
+                });
+                if (!uploadRes.ok) throw new Error("Failed to upload to S3");
+
+                alert("Uploaded successfully!");
+                document.getElementById('cafe-form').reset();
+                document.getElementById('file-preview').innerHTML = '';
+                token = null; // optional: clear token after upload
+
+            } catch (error) {
+                console.error(error);
+                alert("Upload error: " + error.message);
+                token = null; // reset token if failed
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Save';
+            }
+        });
     </script>
+
 </body>
 
 </html>
