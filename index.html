@@ -4,7 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Café Visits</title>
+    <title>The Cup Schema - Azam's NYC Coffee Dataset</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -13,68 +17,122 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background-color: #f5f5f5;
-            padding: 2rem;
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #fafafa;
+            padding: 0;
+            margin: 0;
+            color: rgba(0, 0, 0, 0.87);
         }
 
         .header {
             text-align: center;
-            margin-bottom: 2rem;
-            color: #2d3748;
+            width: 100%;
+            padding: 3rem 2rem;
+            background: #212121;
+            border-radius: 0;
+            color: white;
+            position: relative;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), 0 4px 5px rgba(0, 0, 0, 0.14), 0 1px 10px rgba(0, 0, 0, 0.12);
+        }
+
+        .content-wrapper {
+            padding: 2rem;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
         }
 
         .header h1 {
+            font-family: 'Anton', sans-serif;
+            font-size: 4rem;
+            font-weight: 400;
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.02em;
+            color: white;
+            position: relative;
+            text-transform: uppercase;
+        }
+
+        .header h1::after {
+            content: '☕';
+            display: inline-block;
+            margin-left: 0.75rem;
             font-size: 2.5rem;
-            margin-bottom: 1rem;
+            opacity: 0.9;
+            vertical-align: middle;
+        }
+
+        .header .subtitle {
+            font-family: 'Courier New', 'Courier', 'Monaco', 'Menlo', monospace;
+            font-size: 0.875rem;
+            font-weight: 400;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 0.5rem;
         }
 
         .nav-buttons {
             display: flex;
             justify-content: center;
-            gap: 1rem;
+            gap: 0.5rem;
+            margin-top: 2rem;
             margin-bottom: 1rem;
+            position: relative;
+            z-index: 1;
         }
 
         .nav-button {
-            padding: 0.5rem 1rem;
-            font-size: 1rem;
+            padding: 0.625rem 1.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
             border: none;
-            border-radius: 5px;
-            background-color: #2d3748;
+            border-radius: 4px;
+            background-color: rgba(255, 255, 255, 0.12);
             color: white;
             cursor: pointer;
-            transition: background-color 0.3s ease;
+            transition: background-color 0.2s ease, box-shadow 0.2s ease;
             text-decoration: none;
             display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 0.0892857143em;
+            box-shadow: none;
         }
 
         .nav-button:hover {
-            background-color: #4a5568;
+            background-color: rgba(255, 255, 255, 0.16);
         }
 
         .nav-button.active {
-            background-color: #3182ce;
+            background-color: rgba(255, 255, 255, 0.24);
         }
 
         .toggle-container {
             text-align: center;
-            margin-bottom: 2rem;
+            margin-top: 1.5rem;
+            position: relative;
+            z-index: 1;
         }
 
         .toggle-button {
-            padding: 0.5rem 1rem;
-            font-size: 1rem;
+            padding: 0.625rem 1.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
             border: none;
-            border-radius: 5px;
-            background-color: #2d3748;
+            border-radius: 4px;
+            background-color: rgba(255, 255, 255, 0.12);
             color: white;
             cursor: pointer;
-            transition: background-color 0.3s ease;
+            transition: background-color 0.2s ease, box-shadow 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.0892857143em;
+            box-shadow: none;
         }
 
         .toggle-button:hover {
-            background-color: #4a5568;
+            background-color: rgba(255, 255, 255, 0.16);
         }
 
         .gallery {
@@ -86,15 +144,20 @@
 
         .cafe-card {
             background: white;
-            border-radius: 12px;
+            border-radius: 4px;
             overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s;
+            box-shadow: 0 2px 1px -1px rgba(0, 0, 0, 0.2),
+                0 1px 1px 0 rgba(0, 0, 0, 0.14),
+                0 1px 3px 0 rgba(0, 0, 0, 0.12);
+            transition: box-shadow 0.2s ease, transform 0.2s ease;
             position: relative;
         }
 
         .cafe-card:hover {
-            transform: translateY(-5px);
+            box-shadow: 0 4px 5px -1px rgba(0, 0, 0, 0.2),
+                0 2px 4px 0 rgba(0, 0, 0, 0.14),
+                0 1px 10px 0 rgba(0, 0, 0, 0.12);
+            transform: translateY(-2px);
         }
 
         .cafe-image-container {
@@ -155,8 +218,37 @@
         }
 
         @media (max-width: 768px) {
-            body {
+            .content-wrapper {
                 padding: 1rem;
+            }
+
+            .header {
+                padding: 2rem 1.5rem;
+                margin-bottom: 2rem;
+            }
+
+            .header h1 {
+                font-size: 2.25rem;
+            }
+
+            .header h1::after {
+                margin-left: 0.5rem;
+                font-size: 1.75rem;
+            }
+
+            .header .subtitle {
+                font-size: 0.9rem;
+                letter-spacing: 0.1em;
+            }
+
+            .nav-buttons {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .nav-button {
+                padding: 0.55rem 1rem;
+                font-size: 0.85rem;
             }
 
             .gallery {
@@ -169,19 +261,24 @@
 
 <body>
     <div class="header">
-        <h1>Azam's NYC Cafe Hop</h1>
+        <div class="header-content">
+            <h1>The Cup Schema</h1>
+            <p class="subtitle">Azam's NYC Coffee Dataset</p>
+        </div>
         <div class="nav-buttons">
             <a href="index.html" class="nav-button active">Gallery View</a>
             <a href="map.html" class="nav-button">Map View</a>
             <a href="add.html" class="nav-button">Add Café</a>
         </div>
         <div class="toggle-container">
-            <button class="toggle-button" id="toggle-sort">Sort by Most Recent</button>
+            <button class="toggle-button" id="toggle-sort">Sort Alphabetical</button>
         </div>
     </div>
 
-    <div id="gallery" class="gallery">
-        <div class="loading">Loading café images...</div>
+    <div class="content-wrapper">
+        <div id="gallery" class="gallery">
+            <div class="loading">Loading café images...</div>
+        </div>
     </div>
 
     <script>
@@ -301,7 +398,7 @@
         // Toggle sort mode
         document.getElementById('toggle-sort').addEventListener('click', () => {
             currentSort = currentSort === 'recent' ? 'name' : 'recent';
-            document.getElementById('toggle-sort').textContent = currentSort === 'recent' ? 'Sort by Alphabetical' : 'Sort by Most Recent';
+            document.getElementById('toggle-sort').textContent = currentSort === 'recent' ? 'Sort Alphabetical' : 'Sort by Most Recent';
             loadImages();
         });
 
