@@ -1,12 +1,26 @@
 import json
 import boto3
-import io
-from io import BytesIO
 
 s3 = boto3.client("s3")
 BUCKET = "azamcafelistphotos"
 
+# CORS headers for GitHub Pages
+CORS_HEADERS = {
+    "Access-Control-Allow-Origin": "https://azamkhan99.github.io",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Methods": "POST, OPTIONS"
+}
+
 def lambda_handler(event, context):
+    # Handle preflight OPTIONS request
+    method = event.get("requestContext", {}).get("http", {}).get("method", "")
+    if method == "OPTIONS":
+        return {
+            "statusCode": 200,
+            "headers": CORS_HEADERS,
+            "body": ""
+        }
+
     try:
         body = json.loads(event.get("body", "{}"))
         content_type = body.get("contentType", "image/jpeg")
@@ -16,30 +30,22 @@ def lambda_handler(event, context):
         latitude = body.get("latitude")
         longitude = body.get("longitude")
 
-        # Validate cafe name is provided
         if not cafe_name:
             return {
                 "statusCode": 400,
-                "headers": {
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow-Headers": "*"
-                },
-                "body": json.dumps({
-                    "error": "Cafe name is required"
-                })
+                "headers": CORS_HEADERS,
+                "body": json.dumps({"error": "Cafe name is required"})
             }
 
-        # Generate filename based on rating
-        # Sanitize cafe name (remove special characters that might cause issues)
+        # Sanitize cafe name
         safe_cafe_name = cafe_name.replace("/", "_").replace("\\", "_")
-        
-        # Check if rating is provided and valid
+
+        # Generate filename
         rating_value = None
         if rating is not None and rating != "":
             try:
                 rating_value = float(rating)
                 if rating_value > 0:
-                    # Format rating to integer if it's a whole number, otherwise keep decimal
                     rating_str = str(int(rating_value)) if rating_value == int(rating_value) else str(rating_value)
                     key = f"{safe_cafe_name}_{rating_str}_STARS.jpg"
                 else:
@@ -49,6 +55,7 @@ def lambda_handler(event, context):
         else:
             key = f"{safe_cafe_name}_unvisited.jpg"
 
+        # Generate presigned URL with metadata
         url = s3.generate_presigned_url(
             ClientMethod="put_object",
             Params={
@@ -68,23 +75,13 @@ def lambda_handler(event, context):
 
         return {
             "statusCode": 200,
-            "headers": {
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Headers": "*"
-            },
-            "body": json.dumps({
-                "uploadUrl": url,
-                "s3Key": key
-            })
+            "headers": CORS_HEADERS,
+            "body": json.dumps({"uploadUrl": url, "s3Key": key})
         }
+
     except Exception as e:
         return {
             "statusCode": 500,
-            "headers": {
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Headers": "*"
-            },
-            "body": json.dumps({
-                "error": str(e)
-            })
-        } 
+            "headers": CORS_HEADERS,
+            "body": json.dumps({"error": str(e)})
+        }
