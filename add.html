@@ -228,8 +228,47 @@
     </div>
 
     <!-- Load configuration (must be loaded before other scripts) -->
-    <script src="config.js"
-        onerror="console.error('Failed to load config.js. Make sure the file exists in the same directory.')"></script>
+    <script>
+        // Smart path detection for GitHub Pages (handles both root and subdirectory)
+        (function () {
+            const currentPath = window.location.pathname;
+            // Extract base path if in subdirectory (e.g., /cafeHop/ from /cafeHop/add.html)
+            const pathMatch = currentPath.match(/^\/([^\/]+)\//);
+            const basePath = pathMatch ? '/' + pathMatch[1] : '';
+
+            // Try paths in order: absolute subdirectory path, relative path, root absolute
+            const pathsToTry = [
+                basePath + '/config.js',  // /cafeHop/config.js (if in subdirectory)
+                'config.js',              // config.js (relative, same directory)
+                '/config.js'               // /config.js (root absolute)
+            ].filter(p => p); // Remove empty strings
+
+            let currentAttempt = 0;
+
+            function tryLoadConfig() {
+                if (currentAttempt >= pathsToTry.length) {
+                    console.error('❌ Failed to load config.js from all paths:', pathsToTry);
+                    console.error('Current page path:', currentPath);
+                    console.error('Please verify config.js is deployed to GitHub Pages.');
+                    return;
+                }
+
+                const script = document.createElement('script');
+                script.src = pathsToTry[currentAttempt];
+                script.onload = function () {
+                    console.log('✅ config.js loaded successfully from:', pathsToTry[currentAttempt]);
+                };
+                script.onerror = function () {
+                    console.warn('⚠️ Failed to load from:', pathsToTry[currentAttempt], '- trying next path...');
+                    currentAttempt++;
+                    tryLoadConfig();
+                };
+                document.head.appendChild(script);
+            }
+
+            tryLoadConfig();
+        })();
+    </script>
     <script>
         // Verify configuration is loaded
         if (typeof window.APP_CONFIG === 'undefined' || !window.APP_CONFIG.API_GATEWAY_URL) {

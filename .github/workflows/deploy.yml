@@ -40,10 +40,18 @@ jobs:
             echo "✅ config.js generated successfully"
             # Don't print the full content to avoid exposing secrets in logs
             grep -q "API_GATEWAY_URL" config.js && echo "✅ API_GATEWAY_URL found in config.js" || echo "❌ API_GATEWAY_URL not found"
+            echo "📄 File size: $(wc -c < config.js) bytes"
+            echo "📁 Files in root directory:"
+            ls -la *.js *.html 2>/dev/null || echo "No matching files found"
           else
             echo "❌ config.js was not generated!"
             exit 1
           fi
+
+      - name: List files to be deployed
+        run: |
+          echo "📦 Files that will be deployed:"
+          find . -type f -name "*.js" -o -name "*.html" | grep -v node_modules | head -20
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
@@ -51,3 +59,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./
           exclude_assets: 'config.example.js,*.md,.gitignore'
+          keep_files: false
