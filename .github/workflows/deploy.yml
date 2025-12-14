@@ -1,0 +1,53 @@
+name: Deploy with Config
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+# Allow GitHub Actions to write to the repository
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Generate config.js from secrets
+        run: |
+          if [ -z "${{ secrets.API_GATEWAY_URL }}" ]; then
+            echo "❌ ERROR: API_GATEWAY_URL secret is not set!"
+            echo "Please go to Settings > Secrets and variables > Actions and add API_GATEWAY_URL"
+            exit 1
+          fi
+          cat > config.js << EOF
+          // Configuration file - DO NOT COMMIT THIS FILE
+          // This file is generated from GitHub Secrets during deployment
+          
+          window.APP_CONFIG = {
+              API_GATEWAY_URL: '${{ secrets.API_GATEWAY_URL }}'
+          };
+          EOF
+
+      - name: Verify config.js was generated
+        run: |
+          if [ -f config.js ]; then
+            echo "✅ config.js generated successfully"
+            # Don't print the full content to avoid exposing secrets in logs
+            grep -q "API_GATEWAY_URL" config.js && echo "✅ API_GATEWAY_URL found in config.js" || echo "❌ API_GATEWAY_URL not found"
+          else
+            echo "❌ config.js was not generated!"
+            exit 1
+          fi
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./
+          exclude_assets: 'config.example.js,*.md,.gitignore'

@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Café Visits</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f5f5f5;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #2d3748;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .nav-button {
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            border: none;
+            border-radius: 5px;
+            background-color: #2d3748;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .nav-button:hover {
+            background-color: #4a5568;
+        }
+
+        .nav-button.active {
+            background-color: #3182ce;
+        }
+
+        .toggle-container {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .toggle-button {
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            border: none;
+            border-radius: 5px;
+            background-color: #2d3748;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .toggle-button:hover {
+            background-color: #4a5568;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+            padding: 1rem;
+        }
+
+        .cafe-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+            position: relative;
+        }
+
+        .cafe-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .cafe-image-container {
+            position: relative;
+            width: 100%;
+            height: 250px;
+        }
+
+        .cafe-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: filter 0.3s ease;
+        }
+
+        .unvisited .cafe-image {
+            filter: grayscale(100%);
+        }
+
+        .stars-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            color: gold;
+            font-size: 2rem;
+        }
+
+        .cafe-card:hover .stars-overlay {
+            opacity: 1;
+        }
+
+        .cafe-name {
+            padding: 1rem;
+            font-size: 1.1rem;
+            text-align: center;
+            color: #2d3748;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            font-size: 1.25rem;
+            color: #4a5568;
+        }
+
+        .star {
+            color: gold;
+            font-size: 24px;
+            margin: 0 2px;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .gallery {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>Azam's NYC Cafe Hop</h1>
+        <div class="nav-buttons">
+            <a href="index.html" class="nav-button active">Gallery View</a>
+            <a href="map.html" class="nav-button">Map View</a>
+            <a href="add.html" class="nav-button">Add Café</a>
+        </div>
+        <div class="toggle-container">
+            <button class="toggle-button" id="toggle-sort">Sort by Most Recent</button>
+        </div>
+    </div>
+
+    <div id="gallery" class="gallery">
+        <div class="loading">Loading café images...</div>
+    </div>
+
+    <script>
+        const BUCKET_URL = 'https://azamcafelistphotos.s3.us-east-1.amazonaws.com';
+        let currentSort = 'recent'; // Default sort by most recent
+
+        // Function to parse cafe info from filename
+        function parseCafeInfo(filename) {
+            // Remove file extension
+            const nameWithoutExt = filename.replace(/\.[^/.]+$/, "");
+
+            // Check if unvisited
+            if (nameWithoutExt.endsWith('_unvisited')) {
+                return {
+                    name: nameWithoutExt.replace('_unvisited', ''),
+                    visited: false,
+                    stars: 0
+                };
+            }
+
+            // Extract stars for visited cafes
+            const match = nameWithoutExt.match(/_(\d+)_STARS$/);
+            if (match) {
+                return {
+                    name: nameWithoutExt.replace(/_\d+_STARS$/, ''),
+                    visited: true,
+                    stars: parseInt(match[1])
+                };
+            }
+
+            // Default case
+            return {
+                name: nameWithoutExt,
+                visited: true,
+                stars: 0
+            };
+        }
+
+        // Function to generate star rating HTML
+        function generateStars(count) {
+            return '☕️'.repeat(count);
+        }
+
+        // Function to sort cafes by name
+        function sortByName(cafes) {
+            return cafes.sort((a, b) => a.name.localeCompare(b.name));
+        }
+
+        // Function to sort cafes by most recent (based on file upload time)
+        function sortByRecent(cafes) {
+            return cafes.sort((a, b) => new Date(b.lastModified) - new Date(a.lastModified));
+        }
+
+        async function loadImages() {
+            const gallery = document.getElementById('gallery');
+
+            try {
+                // Fetch the bucket listing XML
+                const response = await fetch(`${BUCKET_URL}?list-type=2`);
+                const data = await response.text();
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(data, "text/xml");
+                const contents = xmlDoc.getElementsByTagName("Contents");
+
+                gallery.innerHTML = ''; // Clear loading message
+
+                const cafes = [];
+
+                // Process each object
+                Array.from(contents).forEach(item => {
+                    const key = item.getElementsByTagName("Key")[0].textContent;
+
+                    // Skip if not an image file
+                    if (!key.match(/\.(jpg|jpeg|png|gif)$/i)) return;
+
+                    const imageUrl = `${BUCKET_URL}/${key}`;
+                    const lastModified = item.getElementsByTagName("LastModified")[0].textContent;
+                    const cafeInfo = parseCafeInfo(key);
+
+                    cafes.push({
+                        ...cafeInfo,
+                        imageUrl,
+                        lastModified
+                    });
+                });
+
+                // Sort cafes based on current sort mode
+                const sortedCafes = currentSort === 'name' ? sortByName(cafes) : sortByRecent(cafes);
+
+                // Render sorted cafes
+                sortedCafes.forEach(cafe => {
+                    const card = document.createElement('div');
+                    card.className = `cafe-card ${cafe.visited ? 'visited' : 'unvisited'}`;
+
+                    const starsHtml = cafe.visited ? `
+                        <div class="stars-overlay">
+                            ${generateStars(cafe.stars)}
+                        </div>
+                    ` : '';
+
+                    card.innerHTML = `
+                        <div class="cafe-image-container">
+                            <img class="cafe-image" src="${cafe.imageUrl}" alt="${cafe.name}" loading="lazy">
+                            ${starsHtml}
+                        </div>
+                        <div class="cafe-name">${cafe.name}</div>
+                    `;
+                    gallery.appendChild(card);
+                });
+
+            } catch (error) {
+                console.error('Error loading images:', error);
+                gallery.innerHTML = '<div class="loading">Error loading images. Please try again later.</div>';
+            }
+        }
+
+        // Toggle sort mode
+        document.getElementById('toggle-sort').addEventListener('click', () => {
+            currentSort = currentSort === 'recent' ? 'name' : 'recent';
+            document.getElementById('toggle-sort').textContent = currentSort === 'recent' ? 'Sort by Alphabetical' : 'Sort by Most Recent';
+            loadImages();
+        });
+
+        // Load images when page loads
+        document.addEventListener('DOMContentLoaded', loadImages);
+    </script>
+</body>
+
+</html>
