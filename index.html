@@ -151,6 +151,7 @@
                 0 1px 3px 0 rgba(0, 0, 0, 0.12);
             transition: box-shadow 0.2s ease, transform 0.2s ease;
             position: relative;
+            cursor: pointer;
         }
 
         .cafe-card:hover {
@@ -193,8 +194,15 @@
             font-size: 2rem;
         }
 
-        .cafe-card:hover .stars-overlay {
+        .cafe-card:hover .stars-overlay,
+        .cafe-card.show-stars .stars-overlay {
             opacity: 1;
+        }
+
+        .cafe-card.show-stars {
+            box-shadow: 0 4px 5px -1px rgba(0, 0, 0, 0.2),
+                0 2px 4px 0 rgba(0, 0, 0, 0.14),
+                0 1px 10px 0 rgba(0, 0, 0, 0.12);
         }
 
         .cafe-name {
@@ -386,6 +394,23 @@
                         </div>
                         <div class="cafe-name">${cafe.name}</div>
                     `;
+
+                    // Add click/tap handler to toggle stars overlay on touch devices
+                    card.addEventListener('click', function (e) {
+                        // Check if this card is already showing stars
+                        const isShowing = card.classList.contains('show-stars');
+
+                        // Close all cards first
+                        document.querySelectorAll('.cafe-card').forEach(c => {
+                            c.classList.remove('show-stars');
+                        });
+
+                        // If this card wasn't showing, open it; otherwise leave it closed
+                        if (!isShowing && cafe.visited) {
+                            card.classList.add('show-stars');
+                        }
+                    });
+
                     gallery.appendChild(card);
                 });
 
