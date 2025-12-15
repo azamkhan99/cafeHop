@@ -1,8 +1,9 @@
 import json
 import boto3
+import os
 
 s3 = boto3.client("s3")
-BUCKET = "azamcafelistphotos"
+BUCKET = os.environ["BUCKET_NAME"]
 
 # CORS headers for GitHub Pages
 CORS_HEADERS = {

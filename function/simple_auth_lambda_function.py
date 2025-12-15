@@ -10,7 +10,7 @@ def lambda_handler(event, context):
     password = body.get("password", "")
 
     # Only allow if password matches your private password
-    if password != "":
+    if password != "coffee":
         return {
             "statusCode": 401,
             "body": json.dumps({"error": "Unauthorized"})
