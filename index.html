@@ -298,6 +298,35 @@
             opacity: 0.4;
         }
 
+        .cafe-subway-icons {
+            position: absolute;
+            bottom: 0.5rem;
+            right: 0.5rem;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 0.25rem;
+            flex-wrap: wrap;
+            z-index: 2;
+        }
+
+        .subway-icon {
+            width: 20px;
+            height: 20px;
+            display: inline-block;
+            flex-shrink: 0;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            padding: 2px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        .subway-icon svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
         .loading {
             text-align: center;
             padding: 2rem;
@@ -389,6 +418,33 @@
         </div>
     </div>
 
+    <!-- SVG Sprite for subway icons will be loaded here -->
+
+    <!-- Load SVG sprite for subway icons -->
+    <script>
+        // Load and inject the sprite sheet
+        (function () {
+            fetch('all_icons.svg')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to load icons.svg');
+                    }
+                    return response.text();
+                })
+                .then(sprite => {
+                    // Create a container div and insert the sprite HTML
+                    const container = document.createElement('div');
+                    container.id = 'svg-sprite-container';
+                    container.style.display = 'none';
+                    container.innerHTML = sprite;
+                    document.body.insertBefore(container, document.body.firstChild);
+                })
+                .catch(err => {
+                    console.warn('Could not load icons.svg sprite. Make sure to run: npm run build-icons', err);
+                });
+        })();
+    </script>
+
     <script>
         const BUCKET_URL = 'https://azamcafelistphotos.s3.us-east-1.amazonaws.com';
         let currentSort = 'recent'; // Default sort by most recent
@@ -451,13 +507,61 @@
                 });
 
                 if (response.ok) {
-                    const neighborhood = response.headers.get('x-amz-meta-x-amz-meta-neighborhood');
+                    // S3 stores metadata with double prefix: x-amz-meta-x-amz-meta-...
+                    const neighborhood = response.headers.get('x-amz-meta-x-amz-meta-neighborhood') ||
+                        response.headers.get('x-amz-meta-neighborhood');
                     return neighborhood || null;
                 }
             } catch (error) {
                 // Silently fail - neighborhood will just not be displayed
             }
             return null;
+        }
+
+        // Function to fetch subway routes from S3 metadata
+        async function getSubwayRoutesFromS3(key) {
+            try {
+                const response = await fetch(`${BUCKET_URL}/${key}`, {
+                    method: 'HEAD',
+                    mode: 'cors'
+                });
+
+                if (response.ok) {
+                    // S3 stores metadata with double prefix: x-amz-meta-x-amz-meta-...
+                    const routes = response.headers.get('x-amz-meta-x-amz-meta-closest_subway_lines') ||
+                        response.headers.get('x-amz-meta-closest_subway_lines');
+                    if (routes) {
+                        // Parse comma-separated routes (e.g., "1,2,3" or "A,B,C")
+                        return routes.split(',').map(r => r.trim().toLowerCase()).filter(r => r);
+                    }
+                }
+            } catch (error) {
+                // Silently fail - routes will just not be displayed
+            }
+            return null;
+        }
+
+        // Function to generate subway icon HTML using sprite
+        function generateSubwayIcons(routes) {
+            if (!routes || routes.length === 0) return '';
+
+            const iconsHtml = routes.map(route => {
+                // SVG sprite IDs are based on the filename without extension
+                // The sprite generator uses the file path, so we need to extract just the name
+                // For files like "icons/a.svg", the ID might be "a" or "icons-a"
+                // Let's try both formats
+                const iconId = route; // The route is already lowercase from getSubwayRoutesFromS3
+
+                return `
+                    <span class="subway-icon">
+                        <svg width="28" height="28" viewBox="0 0 90 90">
+                            <use href="#${iconId}" xlink:href="#${iconId}"></use>
+                        </svg>
+                    </span>
+                `;
+            }).join('');
+
+            return `<div class="cafe-subway-icons">${iconsHtml}</div>`;
         }
 
         async function loadImages() {
@@ -484,15 +588,17 @@
                         const lastModified = item.getElementsByTagName("LastModified")[0].textContent;
                         const cafeInfo = parseCafeInfo(key);
 
-                        // Fetch neighborhood from S3 metadata
+                        // Fetch neighborhood and subway routes from S3 metadata
                         const neighborhood = await getNeighborhoodFromS3(key);
+                        const subwayRoutes = await getSubwayRoutesFromS3(key);
 
                         return {
                             ...cafeInfo,
                             imageUrl,
                             lastModified,
                             key,
-                            neighborhood
+                            neighborhood,
+                            subwayRoutes
                         };
                     });
 
@@ -554,10 +660,13 @@
                         ? `<div class="cafe-neighborhood">${cafe.neighborhood}</div>`
                         : '';
 
+                    const subwayIconsHtml = generateSubwayIcons(cafe.subwayRoutes);
+
                     card.innerHTML = `
                         <div class="cafe-image-container">
                             <img class="cafe-image" src="${cafe.imageUrl}" alt="${cafe.name}" loading="lazy">
                             ${starsHtml}
+                            ${subwayIconsHtml}
                         </div>
                         <div class="cafe-name">${cafe.name}</div>
                         ${neighborhoodHtml}

@@ -6,3 +6,4 @@ __pycache__/
 *.pyc
 *.ipynb
 update-s3-cors.sh
+nyc_subway.json

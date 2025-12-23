@@ -2,6 +2,14 @@ import json
 import boto3
 import os
 
+# Import utils for computing neighborhood and subway station
+try:
+    from utils import get_neighborhood, get_closest_subway_station
+except ImportError:
+    # Fallback if utils not available
+    get_neighborhood = None
+    get_closest_subway_station = None
+
 s3 = boto3.client("s3")
 BUCKET = os.environ["BUCKET_NAME"]
 
@@ -30,6 +38,39 @@ def lambda_handler(event, context):
         notes = body.get("notes", "").strip()
         latitude = body.get("latitude")
         longitude = body.get("longitude")
+        
+        # Compute neighborhood and subway station from coordinates if available
+        neighborhood = ""
+        closest_subway_station = ""
+        closest_subway_lines = ""
+        
+        if latitude is not None and longitude is not None:
+            try:
+                # Compute neighborhood
+                if get_neighborhood:
+                    computed_neighborhood = get_neighborhood(float(latitude), float(longitude))
+                    if computed_neighborhood:
+                        neighborhood = computed_neighborhood
+                
+                # Compute closest subway station
+                if get_closest_subway_station:
+                    subway_data = get_closest_subway_station(float(latitude), float(longitude))
+                    if subway_data:
+                        closest_subway_station = subway_data.get('station', '')
+                        lines = subway_data.get('lines', [])
+                        if lines:
+                            closest_subway_lines = ','.join(lines)
+            except Exception as e:
+                # Log error but don't fail the request
+                print(f"Error computing metadata: {e}")
+        
+        # Allow override from request body if provided
+        if body.get("neighborhood", "").strip():
+            neighborhood = body.get("neighborhood", "").strip()
+        if body.get("closestSubwayStation", "").strip():
+            closest_subway_station = body.get("closestSubwayStation", "").strip()
+        if body.get("closestSubwayLines", "").strip():
+            closest_subway_lines = body.get("closestSubwayLines", "").strip()
 
         if not cafe_name:
             return {
@@ -68,7 +109,10 @@ def lambda_handler(event, context):
                     "notes": notes or "",
                     "rating": str(rating_value) if rating_value else "",
                     "latitude": str(latitude) if latitude is not None else "",
-                    "longitude": str(longitude) if longitude is not None else ""
+                    "longitude": str(longitude) if longitude is not None else "",
+                    "neighborhood": neighborhood or "",
+                    "closest_subway_station": closest_subway_station or "",
+                    "closest_subway_lines": closest_subway_lines or ""
                 }
             },
             ExpiresIn=60
