@@ -5,3 +5,4 @@ bucket-name.txt
 __pycache__/
 *.pyc
 *.ipynb
+update-s3-cors.sh

@@ -6,7 +6,64 @@ import http.client
 import json
 from PIL import Image, ExifTags
 from io import BytesIO
+from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 
+import time
+
+geolocator = Nominatim(user_agent="azam_cafehop")
+
+def get_neighborhood(lat, lon):
+    """Get neighborhood name from coordinates"""
+    if not lat or not lon:
+        return None
+    try:
+        location = geolocator.reverse(f"{lat}, {lon}", exactly_one=True)
+        if location:
+            address = location.raw.get('address', {})
+            # Try to get neighborhood, or fall back to other location names
+            neighborhood = (address.get('neighbourhood') or 
+                          address.get('suburb') or 
+                          address.get('city_district') or
+                          address.get('quarter'))
+            if neighborhood.startswith("Manhattan Community Board"):
+                neighborhood = translate_manhattan_community_board(neighborhood)
+            return neighborhood
+    except (GeocoderTimedOut, GeocoderServiceError) as e:
+        print(f"Geocoding error for {lat}, {lon}: {e}")
+        return None
+    except Exception as e:
+        print(f"Unexpected error for {lat}, {lon}: {e}")
+        return None
+
+def translate_manhattan_community_board(board_str):
+    """
+    Translate Manhattan Community Board names to approximate neighborhood names.
+
+    Args:
+        board_str (str): e.g., 'Manhattan Community Board 5'
+
+    Returns:
+        str or None: Human-readable neighborhood name, or None if not a CB or unknown.
+    """
+    cb_to_neighborhood = {
+        'Manhattan Community Board 1': 'Financial District, Tribeca, Battery Park City',
+        'Manhattan Community Board 2': 'Greenwich Village, SoHo, NoHo',
+        'Manhattan Community Board 3': 'Lower East Side, Chinatown, East Village',
+        'Manhattan Community Board 4': 'Chelsea, Hell\'s Kitchen (Clinton)',
+        'Manhattan Community Board 5': 'Midtown, Flatiron, Times Square',
+        'Manhattan Community Board 6': 'Murray Hill, Kips Bay, Gramercy',
+        'Manhattan Community Board 7': 'Upper West Side',
+        'Manhattan Community Board 8': 'Upper East Side, Yorkville',
+        'Manhattan Community Board 9': 'Morningside Heights, Manhattanville',
+        'Manhattan Community Board 10': 'Harlem',
+        'Manhattan Community Board 11': 'East Harlem',
+        'Manhattan Community Board 12': 'Washington Heights, Inwood'
+    }
+    if isinstance(board_str, str):
+        match = cb_to_neighborhood.get(board_str).split(",")[0]
+        return match
+    return None
 
 def get_place_id(api_key, place_name):
     """Fetch the Place ID for a given place name."""

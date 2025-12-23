@@ -10,6 +10,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -151,9 +153,9 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        .cafe-card:hover {
+        /* .cafe-card:hover {
             transform: translateY(-2px);
-        }
+        } */
 
         .cafe-image-container {
             position: relative;
@@ -161,10 +163,18 @@
             height: 250px;
         }
 
+        /* .cafe-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: filter 0.3s ease;
+        } */
         .cafe-image {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            filter: contrast(1.05) saturate(1.05);
             transition: filter 0.3s ease;
         }
 
@@ -201,12 +211,25 @@
         }
 
         .cafe-name {
-            padding: 1rem;
+            padding: 0.6rem 1rem 0.1rem 1rem;
             font-size: 1.4rem;
             text-align: center;
             color: #000000;
-            font-family: 'Helvetica', 'Helvetica Neue', Arial, sans-serif;
+            font-family: 'Space Grotesk', sans-serif;
             background-color: white;
+        }
+
+        .cafe-neighborhood {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.78rem;
+            /* slightly smaller */
+            letter-spacing: 0.16em;
+            /* more editorial */
+            text-transform: uppercase;
+            color: rgba(0, 0, 0, 0.45);
+            /* softer, metadata feel */
+            text-align: center;
+            padding: 0 1rem 0.4rem 1rem;
         }
 
         .loading {
@@ -337,6 +360,24 @@
             return cafes.sort((a, b) => new Date(b.lastModified) - new Date(a.lastModified));
         }
 
+        // Function to fetch neighborhood from S3 metadata
+        async function getNeighborhoodFromS3(key) {
+            try {
+                const response = await fetch(`${BUCKET_URL}/${key}`, {
+                    method: 'HEAD',
+                    mode: 'cors'
+                });
+
+                if (response.ok) {
+                    const neighborhood = response.headers.get('x-amz-meta-x-amz-meta-neighborhood');
+                    return neighborhood || null;
+                }
+            } catch (error) {
+                // Silently fail - neighborhood will just not be displayed
+            }
+            return null;
+        }
+
         async function loadImages() {
             const gallery = document.getElementById('gallery');
 
@@ -350,25 +391,32 @@
 
                 gallery.innerHTML = ''; // Clear loading message
 
-                const cafes = [];
-
-                // Process each object
-                Array.from(contents).forEach(item => {
+                // Process each object and fetch metadata in parallel
+                const cafePromises = Array.from(contents).map(async (item) => {
                     const key = item.getElementsByTagName("Key")[0].textContent;
 
                     // Skip if not an image file
-                    if (!key.match(/\.(jpg|jpeg|png|gif)$/i)) return;
+                    if (!key.match(/\.(jpg|jpeg|png|gif)$/i)) return null;
 
                     const imageUrl = `${BUCKET_URL}/${key}`;
                     const lastModified = item.getElementsByTagName("LastModified")[0].textContent;
                     const cafeInfo = parseCafeInfo(key);
 
-                    cafes.push({
+                    // Fetch neighborhood from S3 metadata
+                    const neighborhood = await getNeighborhoodFromS3(key);
+
+                    return {
                         ...cafeInfo,
                         imageUrl,
-                        lastModified
-                    });
+                        lastModified,
+                        key,
+                        neighborhood
+                    };
                 });
+
+                // Wait for all metadata requests to complete
+                const cafesWithMetadata = await Promise.all(cafePromises);
+                const cafes = cafesWithMetadata.filter(cafe => cafe !== null);
 
                 // Sort cafes based on current sort mode
                 const sortedCafes = currentSort === 'name' ? sortByName(cafes) : sortByRecent(cafes);
@@ -384,12 +432,17 @@
                         </div>
                     ` : '';
 
+                    const neighborhoodHtml = cafe.neighborhood
+                        ? `<div class="cafe-neighborhood">📍 ${cafe.neighborhood}</div>`
+                        : '';
+
                     card.innerHTML = `
                         <div class="cafe-image-container">
                             <img class="cafe-image" src="${cafe.imageUrl}" alt="${cafe.name}" loading="lazy">
                             ${starsHtml}
                         </div>
                         <div class="cafe-name">${cafe.name}</div>
+                        ${neighborhoodHtml}
                     `;
 
                     // Add click/tap handler to toggle stars overlay on touch devices
