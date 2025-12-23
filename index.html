@@ -38,7 +38,8 @@
         }
 
         .content-wrapper {
-            padding: 2rem;
+            padding: 0;
+            margin-top: 0;
         }
 
         .header-content {
@@ -88,10 +89,11 @@
 
         .nav-button {
             padding: 0.625rem 1.5rem;
+            font-family: 'Space Grotesk', sans-serif;
             font-size: 0.875rem;
             font-weight: 500;
             border: none;
-            border-radius: 4px;
+            border-radius: 2px;
             background-color: rgba(255, 255, 255, 0.12);
             color: white;
             cursor: pointer;
@@ -111,35 +113,88 @@
         }
 
         .toggle-container {
-            text-align: center;
-            margin-top: 1.5rem;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            gap: 1rem;
+            padding: 0 1.5rem;
+            margin: 1.25rem 0 0 0;
             position: relative;
             z-index: 1;
         }
 
-        .toggle-button {
-            padding: 0.625rem 1.5rem;
-            font-size: 0.875rem;
+        .sort-toggle {
+            position: absolute;
+            top: 0.7rem;
+            right: 0.7rem;
+            padding: 0.25rem 0.25rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.7rem;
             font-weight: 500;
-            border: none;
-            border-radius: 4px;
-            background-color: rgba(255, 255, 255, 0.12);
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            background-color: rgba(0, 0, 0, 0.4);
             color: white;
             cursor: pointer;
-            transition: background-color 0.2s ease;
             text-transform: uppercase;
-            letter-spacing: 0.0892857143em;
+            letter-spacing: 0.09em;
+            z-index: 2;
         }
 
-        .toggle-button:hover {
-            background-color: rgba(255, 255, 255, 0.16);
+        .sort-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .filter-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.85rem;
+            color: rgba(0, 0, 0, 0.85);
+            letter-spacing: 0.08em;
+        }
+
+        .filter-label {
+            opacity: 0.85;
+        }
+
+        .filter-select-wrapper {
+            display: inline-flex;
+            align-items: center;
+            position: relative;
+        }
+
+        .filter-select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            padding: 0.1rem 0.9rem 0.05rem 0.35rem;
+            border-radius: 0;
+            border: none;
+            border-bottom: 0.5px solid rgba(0, 0, 0, 0.4);
+            background-color: transparent;
+            color: inherit;
+            cursor: pointer;
+            outline: none;
+            opacity: 0.85;
+        }
+
+        .filter-arrow {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            position: absolute;
+            right: 0.1rem;
+            pointer-events: none;
         }
 
         .gallery {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 2rem;
-            padding: 1rem;
+            /* Use the same spacing between cards and at the edges */
+            gap: 1.5rem;
+            padding: 1.5rem;
+            margin-top: 0;
         }
 
         .cafe-card {
@@ -211,7 +266,7 @@
         }
 
         .cafe-name {
-            padding: 0.6rem 1rem 0.1rem 1rem;
+            padding: 0.6rem 0rem 0rem 0rem;
             font-size: 1.4rem;
             text-align: center;
             color: #000000;
@@ -219,17 +274,23 @@
             background-color: white;
         }
 
+        .cafe-name.cafe-name-small {
+            font-size: 1.1rem;
+        }
+
         .cafe-neighborhood {
             font-family: 'Space Grotesk', sans-serif;
             font-size: 0.78rem;
-            /* slightly smaller */
             letter-spacing: 0.16em;
-            /* more editorial */
             text-transform: uppercase;
             color: rgba(0, 0, 0, 0.45);
-            /* softer, metadata feel */
             text-align: center;
-            padding: 0 1rem 0.4rem 1rem;
+            padding: 0 1rem 0 1rem;
+        }
+
+        .cafe-neighborhood::before {
+            content: "— ";
+            opacity: 0.4;
         }
 
         .loading {
@@ -247,12 +308,12 @@
 
         @media (max-width: 768px) {
             .content-wrapper {
-                padding: 1rem;
+                padding: 0;
             }
 
             .header {
                 padding: 2rem 1.5rem;
-                margin-bottom: 2rem;
+                margin-bottom: 0;
             }
 
             .header h1 {
@@ -282,6 +343,8 @@
             .gallery {
                 grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
                 gap: 1rem;
+                padding: 1rem;
+                margin-top: 0;
             }
         }
     </style>
@@ -294,12 +357,21 @@
             <p class="subtitle">Azam's NYC Coffee Dataset</p>
         </div>
         <div class="nav-buttons">
-            <a href="index.html" class="nav-button active">Gallery View</a>
             <a href="map.html" class="nav-button">Map View</a>
             <a href="add.html" class="nav-button">Add Café</a>
         </div>
-        <div class="toggle-container">
-            <button class="toggle-button" id="toggle-sort">Sort Alphabetical</button>
+        <button class="sort-toggle" id="toggle-sort">Sort A/Z</button>
+    </div>
+
+    <div class="toggle-container">
+        <div class="filter-wrapper">
+            <span class="filter-label">Neighborhood:</span>
+            <div class="filter-select-wrapper">
+                <select id="neighborhood-filter" class="filter-select">
+                    <option value="all">All</option>
+                </select>
+                <span class="filter-arrow">▾</span>
+            </div>
         </div>
     </div>
 
@@ -312,6 +384,8 @@
     <script>
         const BUCKET_URL = 'https://azamcafelistphotos.s3.us-east-1.amazonaws.com';
         let currentSort = 'recent'; // Default sort by most recent
+        let currentNeighborhoodFilter = 'all';
+        let cachedCafes = null; // Cache cafes in memory so sort/filter don't refetch S3
 
         // Function to parse cafe info from filename
         function parseCafeInfo(filename) {
@@ -382,44 +456,80 @@
             const gallery = document.getElementById('gallery');
 
             try {
-                // Fetch the bucket listing XML
-                const response = await fetch(`${BUCKET_URL}?list-type=2`);
-                const data = await response.text();
-                const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(data, "text/xml");
-                const contents = xmlDoc.getElementsByTagName("Contents");
+                // Load and cache cafes from S3 only once per page load
+                if (!cachedCafes) {
+                    // Fetch the bucket listing XML
+                    const response = await fetch(`${BUCKET_URL}?list-type=2`);
+                    const data = await response.text();
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(data, "text/xml");
+                    const contents = xmlDoc.getElementsByTagName("Contents");
 
-                gallery.innerHTML = ''; // Clear loading message
+                    // Process each object and fetch metadata in parallel
+                    const cafePromises = Array.from(contents).map(async (item) => {
+                        const key = item.getElementsByTagName("Key")[0].textContent;
 
-                // Process each object and fetch metadata in parallel
-                const cafePromises = Array.from(contents).map(async (item) => {
-                    const key = item.getElementsByTagName("Key")[0].textContent;
+                        // Skip if not an image file
+                        if (!key.match(/\.(jpg|jpeg|png|gif)$/i)) return null;
 
-                    // Skip if not an image file
-                    if (!key.match(/\.(jpg|jpeg|png|gif)$/i)) return null;
+                        const imageUrl = `${BUCKET_URL}/${key}`;
+                        const lastModified = item.getElementsByTagName("LastModified")[0].textContent;
+                        const cafeInfo = parseCafeInfo(key);
 
-                    const imageUrl = `${BUCKET_URL}/${key}`;
-                    const lastModified = item.getElementsByTagName("LastModified")[0].textContent;
-                    const cafeInfo = parseCafeInfo(key);
+                        // Fetch neighborhood from S3 metadata
+                        const neighborhood = await getNeighborhoodFromS3(key);
 
-                    // Fetch neighborhood from S3 metadata
-                    const neighborhood = await getNeighborhoodFromS3(key);
+                        return {
+                            ...cafeInfo,
+                            imageUrl,
+                            lastModified,
+                            key,
+                            neighborhood
+                        };
+                    });
 
-                    return {
-                        ...cafeInfo,
-                        imageUrl,
-                        lastModified,
-                        key,
-                        neighborhood
-                    };
-                });
+                    // Wait for all metadata requests to complete
+                    const cafesWithMetadata = await Promise.all(cafePromises);
+                    cachedCafes = cafesWithMetadata.filter(cafe => cafe !== null);
+                }
 
-                // Wait for all metadata requests to complete
-                const cafesWithMetadata = await Promise.all(cafePromises);
-                const cafes = cafesWithMetadata.filter(cafe => cafe !== null);
+                const cafes = cachedCafes;
+
+                // Clear current gallery contents
+                gallery.innerHTML = '';
+
+                // Build neighborhood filter options from cached cafes
+                const neighborhoodSelect = document.getElementById('neighborhood-filter');
+                if (neighborhoodSelect) {
+                    const previousValue = currentNeighborhoodFilter;
+                    const neighborhoods = Array.from(
+                        new Set(
+                            cafes
+                                .map(c => c.neighborhood)
+                                .filter(n => n && n.trim().length > 0)
+                        )
+                    ).sort((a, b) => a.localeCompare(b));
+
+                    neighborhoodSelect.innerHTML = '<option value=\"all\">All</option>' +
+                        neighborhoods.map(n => `<option value=\"${n}\">${n}</option>`).join('');
+
+                    // Restore previous selection if still available
+                    if (previousValue && previousValue !== 'all' && neighborhoods.includes(previousValue)) {
+                        neighborhoodSelect.value = previousValue;
+                        currentNeighborhoodFilter = previousValue;
+                    } else {
+                        neighborhoodSelect.value = 'all';
+                        currentNeighborhoodFilter = 'all';
+                    }
+                }
+
+                // Apply neighborhood filter
+                const filteredCafes = currentNeighborhoodFilter === 'all'
+                    ? cafes
+                    : cafes.filter(cafe => cafe.neighborhood === currentNeighborhoodFilter);
 
                 // Sort cafes based on current sort mode
-                const sortedCafes = currentSort === 'name' ? sortByName(cafes) : sortByRecent(cafes);
+                const sortedCafes = currentSort === 'name' ? sortByName(filteredCafes) : sortByRecent(filteredCafes);
 
                 // Render sorted cafes
                 sortedCafes.forEach(cafe => {
@@ -433,7 +543,7 @@
                     ` : '';
 
                     const neighborhoodHtml = cafe.neighborhood
-                        ? `<div class="cafe-neighborhood">📍 ${cafe.neighborhood}</div>`
+                        ? `<div class="cafe-neighborhood">${cafe.neighborhood}</div>`
                         : '';
 
                     card.innerHTML = `
@@ -499,11 +609,30 @@
         }
 
         // Toggle sort mode
-        document.getElementById('toggle-sort').addEventListener('click', () => {
-            currentSort = currentSort === 'recent' ? 'name' : 'recent';
-            document.getElementById('toggle-sort').textContent = currentSort === 'recent' ? 'Sort Alphabetical' : 'Sort by Most Recent';
-            loadImages();
-        });
+        const sortButton = document.getElementById('toggle-sort');
+        function updateSortLabel() {
+            if (!sortButton) return;
+            sortButton.textContent = currentSort === 'recent' ? 'RECENT' : 'A/Z';
+        }
+
+        if (sortButton) {
+            sortButton.addEventListener('click', () => {
+                currentSort = currentSort === 'recent' ? 'name' : 'recent';
+                updateSortLabel();
+                loadImages();
+            });
+            // Set initial label based on default sort mode
+            updateSortLabel();
+        }
+
+        // Neighborhood filter change
+        const neighborhoodSelectEl = document.getElementById('neighborhood-filter');
+        if (neighborhoodSelectEl) {
+            neighborhoodSelectEl.addEventListener('change', (e) => {
+                currentNeighborhoodFilter = e.target.value;
+                loadImages();
+            });
+        }
 
         // Load images when page loads
         document.addEventListener('DOMContentLoaded', loadImages);
