@@ -288,9 +288,10 @@
             font-size: 0.78rem;
             letter-spacing: 0.16em;
             text-transform: uppercase;
-            color: rgba(0, 0, 0, 0.45);
+            color: rgba(0, 0, 0, 0.398);
             text-align: center;
             padding: 0 1rem 0 1rem;
+
         }
 
         .cafe-neighborhood::before {
@@ -447,9 +448,73 @@
 
     <script>
         const BUCKET_URL = 'https://azamcafelistphotos.s3.us-east-1.amazonaws.com';
+        const CACHE_KEY = 'cafeGalleryData';
+        const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes cache
+        const MAX_CONCURRENT_REQUESTS = 10; // Limit concurrent HEAD requests
         let currentSort = 'recent'; // Default sort by most recent
         let currentNeighborhoodFilter = 'all';
         let cachedCafes = null; // Cache cafes in memory so sort/filter don't refetch S3
+
+        // Cache management functions
+        function getCachedData() {
+            try {
+                const cached = localStorage.getItem(CACHE_KEY);
+                if (!cached) return null;
+
+                const data = JSON.parse(cached);
+                const now = Date.now();
+
+                // Check if cache is still valid
+                if (now - data.timestamp < CACHE_DURATION) {
+                    return data.cafes;
+                } else {
+                    // Cache expired
+                    localStorage.removeItem(CACHE_KEY);
+                    return null;
+                }
+            } catch (e) {
+                console.warn('Error reading cache:', e);
+                return null;
+            }
+        }
+
+        function setCachedData(cafes) {
+            try {
+                const data = {
+                    timestamp: Date.now(),
+                    cafes: cafes
+                };
+                localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+            } catch (e) {
+                console.warn('Error saving cache:', e);
+            }
+        }
+
+        // Throttle function to limit concurrent requests
+        async function throttleRequests(items, fn, maxConcurrent = MAX_CONCURRENT_REQUESTS) {
+            const results = [];
+            let index = 0;
+
+            async function worker() {
+                while (index < items.length) {
+                    const currentIndex = index++;
+                    results[currentIndex] = fn(items[currentIndex]);
+                }
+            }
+
+            // Start worker threads up to maxConcurrent
+            const workers = [];
+            const numWorkers = Math.min(maxConcurrent, items.length);
+            for (let i = 0; i < numWorkers; i++) {
+                workers.push(worker());
+            }
+
+            // Wait for all workers to complete
+            await Promise.all(workers);
+
+            // Wait for all promises to resolve
+            return Promise.all(results);
+        }
 
         // Function to parse cafe info from filename
         function parseCafeInfo(filename) {
@@ -498,8 +563,8 @@
             return cafes.sort((a, b) => new Date(b.lastModified) - new Date(a.lastModified));
         }
 
-        // Function to fetch neighborhood from S3 metadata
-        async function getNeighborhoodFromS3(key) {
+        // Combined function to fetch both neighborhood and subway routes from S3 metadata in one request
+        async function getMetadataFromS3(key) {
             try {
                 const response = await fetch(`${BUCKET_URL}/${key}`, {
                     method: 'HEAD',
@@ -509,36 +574,21 @@
                 if (response.ok) {
                     // S3 stores metadata with double prefix: x-amz-meta-x-amz-meta-...
                     const neighborhood = response.headers.get('x-amz-meta-x-amz-meta-neighborhood') ||
-                        response.headers.get('x-amz-meta-neighborhood');
-                    return neighborhood || null;
-                }
-            } catch (error) {
-                // Silently fail - neighborhood will just not be displayed
-            }
-            return null;
-        }
+                        response.headers.get('x-amz-meta-neighborhood') || null;
 
-        // Function to fetch subway routes from S3 metadata
-        async function getSubwayRoutesFromS3(key) {
-            try {
-                const response = await fetch(`${BUCKET_URL}/${key}`, {
-                    method: 'HEAD',
-                    mode: 'cors'
-                });
-
-                if (response.ok) {
-                    // S3 stores metadata with double prefix: x-amz-meta-x-amz-meta-...
                     const routes = response.headers.get('x-amz-meta-x-amz-meta-closest_subway_lines') ||
                         response.headers.get('x-amz-meta-closest_subway_lines');
-                    if (routes) {
-                        // Parse comma-separated routes (e.g., "1,2,3" or "A,B,C")
-                        return routes.split(',').map(r => r.trim().toLowerCase()).filter(r => r);
-                    }
+
+                    const subwayRoutes = routes
+                        ? routes.split(',').map(r => r.trim().toLowerCase()).filter(r => r)
+                        : null;
+
+                    return { neighborhood, subwayRoutes };
                 }
             } catch (error) {
-                // Silently fail - routes will just not be displayed
+                // Silently fail - metadata will just not be displayed
             }
-            return null;
+            return { neighborhood: null, subwayRoutes: null };
         }
 
         // Function to generate subway icon HTML using sprite
@@ -570,41 +620,61 @@
             try {
                 // Load and cache cafes from S3 only once per page load
                 if (!cachedCafes) {
-                    // Fetch the bucket listing XML
-                    const response = await fetch(`${BUCKET_URL}?list-type=2`);
-                    const data = await response.text();
-                    const parser = new DOMParser();
-                    const xmlDoc = parser.parseFromString(data, "text/xml");
-                    const contents = xmlDoc.getElementsByTagName("Contents");
+                    // Try to load from localStorage cache first
+                    const cachedData = getCachedData();
+                    if (cachedData) {
+                        cachedCafes = cachedData;
+                        // Continue to render immediately with cached data
+                    } else {
+                        // Fetch the bucket listing XML
+                        const response = await fetch(`${BUCKET_URL}?list-type=2`);
+                        const data = await response.text();
+                        const parser = new DOMParser();
+                        const xmlDoc = parser.parseFromString(data, "text/xml");
+                        const contents = xmlDoc.getElementsByTagName("Contents");
 
-                    // Process each object and fetch metadata in parallel
-                    const cafePromises = Array.from(contents).map(async (item) => {
-                        const key = item.getElementsByTagName("Key")[0].textContent;
+                        // First pass: extract basic info from XML
+                        const imageKeys = Array.from(contents)
+                            .map(item => {
+                                const key = item.getElementsByTagName("Key")[0].textContent;
+                                if (!key.match(/\.(jpg|jpeg|png|gif)$/i)) return null;
+                                return {
+                                    key,
+                                    lastModified: item.getElementsByTagName("LastModified")[0].textContent
+                                };
+                            })
+                            .filter(item => item !== null);
 
-                        // Skip if not an image file
-                        if (!key.match(/\.(jpg|jpeg|png|gif)$/i)) return null;
+                        // Create base cafe objects
+                        const baseCafes = imageKeys.map(({ key, lastModified }) => {
+                            const cafeInfo = parseCafeInfo(key);
+                            return {
+                                ...cafeInfo,
+                                imageUrl: `${BUCKET_URL}/${key}`,
+                                lastModified,
+                                key,
+                                neighborhood: null,
+                                subwayRoutes: null
+                            };
+                        });
 
-                        const imageUrl = `${BUCKET_URL}/${key}`;
-                        const lastModified = item.getElementsByTagName("LastModified")[0].textContent;
-                        const cafeInfo = parseCafeInfo(key);
+                        // Fetch metadata with throttling (limited concurrent requests)
+                        cachedCafes = await throttleRequests(
+                            baseCafes,
+                            async (cafe) => {
+                                const metadata = await getMetadataFromS3(cafe.key);
+                                return {
+                                    ...cafe,
+                                    neighborhood: metadata.neighborhood,
+                                    subwayRoutes: metadata.subwayRoutes
+                                };
+                            },
+                            MAX_CONCURRENT_REQUESTS
+                        );
 
-                        // Fetch neighborhood and subway routes from S3 metadata
-                        const neighborhood = await getNeighborhoodFromS3(key);
-                        const subwayRoutes = await getSubwayRoutesFromS3(key);
-
-                        return {
-                            ...cafeInfo,
-                            imageUrl,
-                            lastModified,
-                            key,
-                            neighborhood,
-                            subwayRoutes
-                        };
-                    });
-
-                    // Wait for all metadata requests to complete
-                    const cafesWithMetadata = await Promise.all(cafePromises);
-                    cachedCafes = cafesWithMetadata.filter(cafe => cafe !== null);
+                        // Cache the results
+                        setCachedData(cachedCafes);
+                    }
                 }
 
                 const cafes = cachedCafes;
@@ -645,84 +715,111 @@
                 // Sort cafes based on current sort mode
                 const sortedCafes = currentSort === 'name' ? sortByName(filteredCafes) : sortByRecent(filteredCafes);
 
-                // Render sorted cafes
-                sortedCafes.forEach(cafe => {
-                    const card = document.createElement('div');
-                    card.className = `cafe-card ${cafe.visited ? 'visited' : 'unvisited'}`;
-
-                    const starsHtml = cafe.visited ? `
-                        <div class="stars-overlay">
-                            ${generateStars(cafe.stars)}
-                        </div>
-                    ` : '';
-
-                    const neighborhoodHtml = cafe.neighborhood
-                        ? `<div class="cafe-neighborhood">${cafe.neighborhood}</div>`
-                        : '';
-
-                    const subwayIconsHtml = generateSubwayIcons(cafe.subwayRoutes);
-
-                    card.innerHTML = `
-                        <div class="cafe-image-container">
-                            <img class="cafe-image" src="${cafe.imageUrl}" alt="${cafe.name}" loading="lazy">
-                            ${starsHtml}
-                            ${subwayIconsHtml}
-                        </div>
-                        <div class="cafe-name">${cafe.name}</div>
-                        ${neighborhoodHtml}
-                    `;
-
-                    // Add click/tap handler to toggle stars overlay on touch devices
-                    let touchStartTime = 0;
-                    let touchStartY = 0;
-
-                    card.addEventListener('touchstart', function (e) {
-                        touchStartTime = Date.now();
-                        touchStartY = e.touches[0].clientY;
-                    }, { passive: true });
-
-                    card.addEventListener('touchend', function (e) {
-                        const touchEndTime = Date.now();
-                        const touchEndY = e.changedTouches[0].clientY;
-                        const touchDuration = touchEndTime - touchStartTime;
-                        const touchDistance = Math.abs(touchEndY - touchStartY);
-
-                        // Only trigger if it's a quick tap (not a swipe or long press)
-                        if (touchDuration < 300 && touchDistance < 10) {
-                            e.preventDefault();
-                            toggleStars(card, cafe.visited);
-                        }
-                    });
-
-                    card.addEventListener('click', function (e) {
-                        // For mouse clicks on desktop
-                        toggleStars(card, cafe.visited);
-                    });
-
-                    function toggleStars(cardElement, isVisited) {
-                        if (!isVisited) return;
-
-                        // Check if this card is already showing stars
-                        const isShowing = cardElement.classList.contains('show-stars');
-
-                        // Close all cards first
-                        document.querySelectorAll('.cafe-card').forEach(c => {
-                            c.classList.remove('show-stars');
-                        });
-
-                        // If this card wasn't showing, open it; otherwise leave it closed
-                        if (!isShowing) {
-                            cardElement.classList.add('show-stars');
-                        }
-                    }
-
-                    gallery.appendChild(card);
-                });
-
+                // Render sorted cafes incrementally to avoid blocking UI
+                await renderCafesIncrementally(sortedCafes, gallery);
             } catch (error) {
                 console.error('Error loading images:', error);
                 gallery.innerHTML = '<div class="loading">Error loading images. Please try again later.</div>';
             }
+        }
+
+        // Render cafes incrementally using requestAnimationFrame to avoid blocking
+        async function renderCafesIncrementally(cafes, gallery) {
+            const BATCH_SIZE = 10; // Render 10 cards per frame
+            let index = 0;
+
+            function renderBatch() {
+                const end = Math.min(index + BATCH_SIZE, cafes.length);
+
+                for (let i = index; i < end; i++) {
+                    const cafe = cafes[i];
+                    const card = createCafeCard(cafe);
+                    gallery.appendChild(card);
+                }
+
+                index = end;
+
+                if (index < cafes.length) {
+                    requestAnimationFrame(renderBatch);
+                }
+            }
+
+            // Start rendering
+            renderBatch();
+        }
+
+        // Extract card creation into a separate function for reusability
+        function createCafeCard(cafe) {
+            const card = document.createElement('div');
+            card.className = `cafe-card ${cafe.visited ? 'visited' : 'unvisited'}`;
+
+            const starsHtml = cafe.visited ? `
+                <div class="stars-overlay">
+                    ${generateStars(cafe.stars)}
+                </div>
+            ` : '';
+
+            const neighborhoodHtml = cafe.neighborhood
+                ? `<div class="cafe-neighborhood">${cafe.neighborhood}</div>`
+                : '';
+
+            const subwayIconsHtml = generateSubwayIcons(cafe.subwayRoutes);
+
+            card.innerHTML = `
+                <div class="cafe-image-container">
+                    <img class="cafe-image" src="${cafe.imageUrl}" alt="${cafe.name}" loading="lazy">
+                    ${starsHtml}
+                    ${subwayIconsHtml}
+                </div>
+                <div class="cafe-name">${cafe.name}</div>
+                ${neighborhoodHtml}
+            `;
+
+            // Add click/tap handler to toggle stars overlay on touch devices
+            let touchStartTime = 0;
+            let touchStartY = 0;
+
+            card.addEventListener('touchstart', function (e) {
+                touchStartTime = Date.now();
+                touchStartY = e.touches[0].clientY;
+            }, { passive: true });
+
+            card.addEventListener('touchend', function (e) {
+                const touchEndTime = Date.now();
+                const touchEndY = e.changedTouches[0].clientY;
+                const touchDuration = touchEndTime - touchStartTime;
+                const touchDistance = Math.abs(touchEndY - touchStartY);
+
+                // Only trigger if it's a quick tap (not a swipe or long press)
+                if (touchDuration < 300 && touchDistance < 10) {
+                    e.preventDefault();
+                    toggleStars(card, cafe.visited);
+                }
+            });
+
+            card.addEventListener('click', function (e) {
+                // For mouse clicks on desktop
+                toggleStars(card, cafe.visited);
+            });
+
+            function toggleStars(cardElement, isVisited) {
+                if (!isVisited) return;
+
+                // Check if this card is already showing stars
+                const isShowing = cardElement.classList.contains('show-stars');
+
+                // Close all cards first
+                document.querySelectorAll('.cafe-card').forEach(c => {
+                    c.classList.remove('show-stars');
+                });
+
+                // If this card wasn't showing, open it; otherwise leave it closed
+                if (!isShowing) {
+                    cardElement.classList.add('show-stars');
+                }
+            }
+
+            return card;
         }
 
         // Toggle sort mode
