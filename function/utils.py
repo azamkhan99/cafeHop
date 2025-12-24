@@ -1,19 +1,11 @@
-import os
-import csv
-from datetime import datetime
-import requests
-import http.client
-import json
-from PIL import Image, ExifTags
-from io import BytesIO
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 import math
 import pickle
-
-import time
-
-geolocator = Nominatim(user_agent="azam_cafehop")
+import os
+import json
+nominatim_api_key = os.environ.get('NOMINATIM_API_KEY')
+geolocator = Nominatim(user_agent=nominatim_api_key)
 
 # Earth radius in meters
 EARTH_RADIUS_M = 6371000
@@ -80,183 +72,6 @@ def translate_manhattan_community_board(board_str):
         return match
     return None
 
-def get_place_id(api_key, place_name):
-    """Fetch the Place ID for a given place name."""
-    url = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json"
-    params = {
-        "key": api_key,
-        "input": place_name,
-        "inputtype": "textquery",
-        "fields": "place_id",
-    }
-    response = requests.get(url, params=params)
-    response_data = response.json()
-
-    if response.status_code == 200 and response_data.get("candidates"):
-        return response_data["candidates"][0]["place_id"]
-    else:
-        raise Exception("Failed to fetch Place ID. Check the place name or API key.")
-
-
-def get_photo_reference(api_key, place_id):
-    """Fetch the photo reference for a given Place ID."""
-    url = "https://maps.googleapis.com/maps/api/place/details/json"
-    params = {
-        "key": api_key,
-        "place_id": place_id,
-        "fields": "photos",
-    }
-    response = requests.get(url, params=params)
-    response_data = response.json()
-
-    if (
-        response.status_code == 200
-        and response_data.get("result")
-        and response_data["result"].get("photos")
-    ):
-        return response_data["result"]["photos"][0]["photo_reference"]
-    else:
-        raise Exception(
-            "Failed to fetch photo reference. Check the Place ID or API key."
-        )
-
-
-def get_photo_url(api_key, photo_reference):
-    """Generate the photo URL using the photo reference."""
-    return f"https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference={photo_reference}&key={api_key}"
-
-
-def download_most_recent_nyc_coffee_csv(access_key):
-    """
-    Download the NYC Coffee.csv from the most recent takeout directory.
-
-    Parameters:
-    -----------
-    dbx : dropbox.Dropbox
-        An authenticated Dropbox client
-
-    Returns:
-    --------
-    list of dict
-        The contents of the NYC Coffee.csv file as a list of dictionaries
-    """
-    conn = http.client.HTTPSConnection("api.dropboxapi.com")
-    payload = json.dumps(
-        {
-            "include_deleted": False,
-            "include_has_explicit_shared_members": False,
-            "include_media_info": False,
-            "include_mounted_folders": True,
-            "include_non_downloadable_files": True,
-            "path": "/Apps/Google Download Your Data/",
-            "recursive": False,
-        }
-    )
-    headers = {
-        "Authorization": f"Bearer {access_key}",
-        "Content-Type": "application/json",
-    }
-    conn.request("POST", "/2/files/list_folder", payload, headers)
-    res = conn.getresponse()
-    data = res.read()
-    print(data.decode("utf-8"))
-    data_dict = json.loads(data)
-
-    # List the takeout directories
-    takeout_dirs = [
-        entry["path_display"]
-        for entry in data_dict["entries"]
-        if entry["name"].startswith("takeout-")
-    ]
-
-    # Find the most recent takeout directory
-    if not takeout_dirs:
-        raise ValueError("No takeout directories found")
-
-    most_recent_takeout = max(
-        takeout_dirs,
-        key=lambda x: datetime.strptime(x.split("takeout-")[1].split("T")[0], "%Y%m%d"),
-    )
-
-    # Construct the full path to NYC Coffee.csv
-    file_path = os.path.join(most_recent_takeout, "Takeout/Saved/NYC Coffee.csv")
-    print(file_path)
-    # Download the file
-    try:
-        conn = http.client.HTTPSConnection("content.dropboxapi.com")
-        payload = ""
-        headers = {
-            "Authorization": f"Bearer {access_key}",
-            # "Dropbox-API-Arg": f'{"path":"/Apps/Google Download Your Data/takeout-20250125T205304Z-001/Takeout/Saved/NYC Coffee.csv"}',
-            "Dropbox-API-Arg": f'{{"path":"{file_path}"}}',
-        }
-        conn.request("POST", "/2/files/download", payload, headers)
-        res = conn.getresponse()
-        data = res.read()
-        print(data.decode("utf-8"))
-        # Save the file locally
-        reader = csv.DictReader(data.decode("utf-8").splitlines())
-        return [row for row in reader]
-
-    except Exception as e:
-        print(f"Error downloading file: {e}")
-        raise
-
-
-def get_image_lat_long(img):
-    """
-    Get the latitude and longitude of an image using its EXIF data.
-    """
-    # Handle both bytes and BytesIO objects
-    if isinstance(img, bytes):
-        img = Image.open(BytesIO(img))
-    else:
-        img = Image.open(img)
-    exif = {ExifTags.TAGS.get(k, k): v for k, v in (img._getexif() or {}).items()}
-
-    gpsinfo = {}
-    if "GPSInfo" not in exif:
-        return None
-
-    for key in exif["GPSInfo"].keys():
-        decode = ExifTags.GPSTAGS.get(key, key)
-        gpsinfo[decode] = exif["GPSInfo"][key]
-
-    latitude = gpsinfo.get("GPSLatitude")
-    longitude = gpsinfo.get("GPSLongitude")
-    lat_ref = gpsinfo.get("GPSLatitudeRef")
-    lon_ref = gpsinfo.get("GPSLongitudeRef")
-
-    if not latitude or not longitude:
-        return None
-
-    lat = dms_to_decimal(latitude, lat_ref)
-    lon = dms_to_decimal(longitude, lon_ref)
-
-    return (float(lat), float(lon))
-
-
-def dms_to_decimal(dms, ref):
-    """
-    Convert GPS coordinates in DMS format to decimal degrees.
-
-    Parameters:
-        dms (tuple): (degrees, minutes, seconds) from Pillow GPSInfo
-        ref (str): 'N', 'S', 'E', or 'W'
-
-    Returns:
-        float: decimal degrees
-    """
-    degrees, minutes, seconds = dms
-    decimal = degrees + minutes / 60 + seconds / 3600
-
-    # South and West are negative
-    if ref in ["S", "W"]:
-        decimal *= -1
-
-    return decimal
-
-
 def haversine_distance(lat1, lon1, lat2, lon2):
     """
     Calculate the great circle distance between two points on Earth using Haversine formula.
@@ -283,12 +98,12 @@ def haversine_distance(lat1, lon1, lat2, lon2):
     return EARTH_RADIUS_M * c
 
 
-def _load_gtfs_data(pickle_path=None):
+def _load_gtfs_data(json_path=None):
     """
-    Load GTFS data from precomputed pickle file. Uses cached data if available.
+    Load GTFS data from precomputed JSON file. Uses cached data if available.
     
     Parameters:
-        pickle_path: Path to gtfs_precomputed.pkl file. If None, tries to find it relative to this file.
+        json_path: Path to gtfs_precomputed.json file. If None, tries to find it relative to this file.
     
     Returns:
         dict: Dictionary containing precomputed GTFS data
@@ -298,36 +113,84 @@ def _load_gtfs_data(pickle_path=None):
     if _gtfs_cache is not None:
         return _gtfs_cache
     
-    # Try to find pickle file
-    if pickle_path is None:
-        # Try relative to utils.py location
+    # Try to find JSON file
+    if json_path is None:
+        # Try in the same directory as utils.py (function/ directory)
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        pickle_path = os.path.join(os.path.dirname(current_dir), 'gtfs_precomputed.pkl')
+        json_path = os.path.join(current_dir, 'gtfs_precomputed.json')
+        
+        # Fallback: try parent directory (for local development)
+        if not os.path.exists(json_path):
+            json_path = os.path.join(os.path.dirname(current_dir), 'gtfs_precomputed.json')
     
-    if not os.path.exists(pickle_path):
-        # If pickle file isn't available, return None
+    if not os.path.exists(json_path):
+        # If JSON file isn't available, return None
+        print(f"GTFS JSON file not found at: {json_path}")
         return None
     
     try:
-        with open(pickle_path, 'rb') as f:
-            data = pickle.load(f)
+        # Check file size
+        file_size = os.path.getsize(json_path)
+        if file_size == 0:
+            print(f"GTFS JSON file is empty: {json_path}")
+            return None
+        
+        # Load JSON file
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        # Convert lists back to numpy arrays if numpy is available (for efficient computation)
+        if HAS_NUMPY:
+            # Convert station_coords back to numpy array (it's stored as list of [lat, lon] in radians)
+            if 'station_coords' in data and isinstance(data['station_coords'], list):
+                data['station_coords'] = np.array(data['station_coords'])
+            # Convert other arrays if needed
+            if 'stop_names' in data and isinstance(data['stop_names'], list):
+                data['stop_names'] = np.array(data['stop_names'])
+            if 'stop_ids' in data and isinstance(data['stop_ids'], list):
+                data['stop_ids'] = np.array(data['stop_ids'])
+            if 'parent_stations' in data and isinstance(data['parent_stations'], list):
+                data['parent_stations'] = np.array(data['parent_stations'])
+        
+        # Convert route lists back to sets for stop_to_routes
+        if 'stop_to_routes' in data:
+            stop_to_routes = {}
+            for stop_id, routes in data['stop_to_routes'].items():
+                stop_to_routes[stop_id] = set(routes) if isinstance(routes, list) else routes
+            data['stop_to_routes'] = stop_to_routes
+        
+        # Verify it has the expected structure
+        required_keys = ['station_coords', 'stop_names', 'stop_ids', 'stop_to_routes', 
+                       'route_id_to_name', 'parent_stations']
+        if not isinstance(data, dict) or not all(key in data for key in required_keys):
+            print(f"GTFS JSON file doesn't have expected structure: {json_path}")
+            return None
         
         # Cache the loaded data
         _gtfs_cache = data
+        print(f"Successfully loaded GTFS data from: {json_path}")
         return _gtfs_cache
+    except json.JSONDecodeError as e:
+        print(f"JSON decode error (file may be corrupted): {e}")
+        print(f"File path: {json_path}, File size: {os.path.getsize(json_path) if os.path.exists(json_path) else 'N/A'} bytes")
+        return None
     except Exception as e:
-        print(f"Error loading GTFS pickle file: {e}")
+        print(f"Error loading GTFS JSON file: {type(e).__name__}: {e}")
+        print(f"File path: {json_path}")
+        import traceback
+        traceback.print_exc()
         return None
 
 
-def get_closest_subway_station(lat, lon, pickle_path=None):
+
+def get_closest_subway_station(lat, lon, json_path=None):
     """
     Find the closest NYC subway station to given coordinates using precomputed GTFS data.
     
     Parameters:
         lat: Latitude in decimal degrees
         lon: Longitude in decimal degrees
-        pickle_path: Path to gtfs_precomputed.pkl file (optional)
+        json_path: Path to gtfs_precomputed.json file (optional)
     
     Returns:
         dict: {
@@ -339,7 +202,7 @@ def get_closest_subway_station(lat, lon, pickle_path=None):
     if not lat or not lon:
         return None
     
-    gtfs_data = _load_gtfs_data(pickle_path)
+    gtfs_data = _load_gtfs_data(json_path)
     if gtfs_data is None:
         return None
     
@@ -440,5 +303,5 @@ def get_closest_subway_station(lat, lon, pickle_path=None):
     return {
         'station': station_name,
         'distance_m': str(round(distance_m, 1)) + 'm',
-        'lines': ','.join([line.lower() for line in lines])
+        'lines': ','.join([line.lower() for line in lines if 'X' not in line])
     }

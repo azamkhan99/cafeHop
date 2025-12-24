@@ -110,7 +110,7 @@ def lambda_handler(event, context):
                     "rating": str(rating_value) if rating_value else "",
                     "latitude": str(latitude) if latitude is not None else "",
                     "longitude": str(longitude) if longitude is not None else "",
-                    "neighborhood": neighborhood or "",
+                    "x-amz-meta-neighborhood": neighborhood or "",
                     "closest_subway_station": closest_subway_station or "",
                     "closest_subway_lines": closest_subway_lines or ""
                 }
