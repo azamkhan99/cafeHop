@@ -296,10 +296,10 @@
         .comparison-container {
             display: grid;
             grid-template-columns: 1fr auto 1fr;
-            gap: 1.5rem;
+            gap: 1rem;
             align-items: center;
             margin-bottom: 2rem;
-            padding: 1.5rem;
+            padding: 1rem;
             background: white;
             border: 1px solid rgba(0, 0, 0, 0.1);
         }
@@ -308,13 +308,13 @@
             text-align: center;
             cursor: pointer;
             transition: all 0.2s ease;
-            padding: 2rem;
+            padding: 1.5rem;
             border: 2px solid transparent;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            min-height: 200px;
+            min-height: 150px;
         }
 
         .comparison-cafe:hover {
@@ -329,7 +329,7 @@
         .comparison-cafe-name {
             font-family: 'Roboto', sans-serif;
             font-weight: 500;
-            font-size: 1.125rem;
+            font-size: 1rem;
             color: rgba(0, 0, 0, 0.87);
             margin-bottom: 0.5rem;
         }
@@ -341,20 +341,21 @@
         }
 
         .comparison-or {
-            width: 50px;
-            height: 50px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             border: 1px solid rgba(0, 0, 0, 0.2);
             display: flex;
             align-items: center;
             justify-content: center;
             font-family: 'Space Grotesk', sans-serif;
-            font-size: 0.875rem;
+            font-size: 0.75rem;
             font-weight: 500;
             color: rgba(0, 0, 0, 0.6);
             text-transform: uppercase;
             letter-spacing: 0.1em;
             background: white;
+            flex-shrink: 0;
         }
 
 
@@ -434,17 +435,62 @@
             color: rgba(0, 0, 0, 0.6);
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 480px) {
             .comparison-container {
                 grid-template-columns: 1fr;
                 gap: 1rem;
+                padding: 0.75rem;
             }
 
             .comparison-vs {
                 display: none;
             }
 
+            .comparison-cafe {
+                padding: 1rem;
+                min-height: 120px;
+            }
 
+            .comparison-cafe-name {
+                font-size: 0.9rem;
+            }
+
+            .comparison-cafe-neighborhood {
+                font-size: 0.75rem;
+            }
+
+            .comparison-or {
+                width: 35px;
+                height: 35px;
+                font-size: 0.65rem;
+                margin: 0 auto;
+                grid-column: 1;
+            }
+        }
+
+        @media (max-width: 768px) and (min-width: 481px) {
+            .comparison-container {
+                gap: 0.75rem;
+                padding: 1rem;
+            }
+
+            .comparison-cafe {
+                padding: 1.25rem;
+                min-height: 140px;
+            }
+
+            .comparison-cafe-name {
+                font-size: 0.95rem;
+            }
+
+            .comparison-or {
+                width: 38px;
+                height: 38px;
+                font-size: 0.7rem;
+            }
+        }
+
+        @media (max-width: 768px) {
             .content-wrapper {
                 padding: 1rem;
             }
