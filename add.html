@@ -139,7 +139,7 @@
         .form-group input[type="file"] {
             width: 100%;
             padding: 0.75rem;
-            border: 2px dashed #cbd5e0;
+            border: 2px dashed #0000003a;
             border-radius: 8px;
             background-color: #f7fafc;
             cursor: pointer;
@@ -147,7 +147,7 @@
         }
 
         .form-group input[type="file"]:hover {
-            border-color: #3182ce;
+            border-color: #0000003a;
             background-color: #edf2f7;
         }
 
@@ -157,7 +157,7 @@
         .form-group textarea {
             width: 100%;
             padding: 0.75rem;
-            border: 2px solid #e2e8f0;
+            border: 1px solid #0000003a;
             border-radius: 8px;
             font-size: 1rem;
             font-family: inherit;
@@ -170,7 +170,7 @@
         .form-group input[type="password"]:focus,
         .form-group textarea:focus {
             outline: none;
-            border-color: #3182ce;
+            border-color: #0000003a;
         }
 
         .password-wrapper {
@@ -263,7 +263,188 @@
             font-size: 0.9rem;
         }
 
+        .comparison-section {
+            display: none;
+            margin-top: 2rem;
+        }
+
+        .comparison-section.active {
+            display: block;
+        }
+
+        .comparison-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .comparison-header h2 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: rgba(0, 0, 0, 0.87);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .comparison-header p {
+            color: rgba(0, 0, 0, 0.6);
+            font-size: 0.875rem;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        .comparison-container {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 1.5rem;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: white;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .comparison-cafe {
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 2rem;
+            border: 2px solid transparent;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 200px;
+        }
+
+        .comparison-cafe:hover {
+            border-color: rgba(0, 0, 0, 0.2);
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+
+        .comparison-cafe:active {
+            border-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .comparison-cafe-name {
+            font-family: 'Roboto', sans-serif;
+            font-weight: 500;
+            font-size: 1.125rem;
+            color: rgba(0, 0, 0, 0.87);
+            margin-bottom: 0.5rem;
+        }
+
+        .comparison-cafe-neighborhood {
+            font-family: 'Roboto', sans-serif;
+            color: rgba(0, 0, 0, 0.6);
+            font-size: 0.875rem;
+        }
+
+        .comparison-or {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: rgba(0, 0, 0, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            background: white;
+        }
+
+
+        .comparison-progress {
+            text-align: center;
+            margin-top: 1rem;
+            font-family: 'Roboto', sans-serif;
+            color: rgba(0, 0, 0, 0.6);
+            font-size: 0.875rem;
+        }
+
+        .comparison-cant-decide {
+            width: 100%;
+            margin-top: 1rem;
+            padding: 0.75rem 1.5rem;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            border-radius: 2px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.0892857143em;
+            background-color: white;
+            color: rgba(0, 0, 0, 0.6);
+        }
+
+        .comparison-cant-decide:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        .comparison-loading {
+            text-align: center;
+            padding: 2rem;
+            font-family: 'Roboto', sans-serif;
+            color: rgba(0, 0, 0, 0.6);
+        }
+
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-top: 4px solid rgba(0, 0, 0, 0.87);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 2rem auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .upload-status {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .upload-status h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            margin-top: 1rem;
+            color: rgba(0, 0, 0, 0.87);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 1rem;
+        }
+
+        .upload-status p {
+            font-family: 'Roboto', sans-serif;
+            color: rgba(0, 0, 0, 0.6);
+        }
+
         @media (max-width: 768px) {
+            .comparison-container {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .comparison-vs {
+                display: none;
+            }
+
+
             .content-wrapper {
                 padding: 1rem;
             }
@@ -354,152 +535,34 @@
                     </div>
                 </div>
 
-                <button type="submit" class="submit-button" id="submit-btn">Save</button>
+                <button type="submit" class="submit-button" id="submit-btn">Next: Compare Cafés</button>
             </form>
+
+            <!-- Comparison Section -->
+            <div class="comparison-section" id="comparison-section">
+                <div class="comparison-header">
+                    <h2>Which do you prefer?</h2>
+                </div>
+                <div id="comparison-content">
+                    <div class="comparison-loading">Loading cafes for comparison...</div>
+                </div>
+                <div class="comparison-progress" id="comparison-progress"></div>
+            </div>
         </div>
     </div>
 
-    <!-- <script>
-        // Preview uploaded image
-        document.getElementById('photo').addEventListener('change', function (e) {
-            const file = e.target.files[0];
-            const preview = document.getElementById('file-preview');
-
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    preview.innerHTML = `
-                        <img src="${e.target.result}" alt="Preview" />
-                        <div class="file-name">${file.name}</div>
-                    `;
-                };
-                reader.readAsDataURL(file);
-            } else {
-                preview.innerHTML = '';
-            }
-        });
-
-        // Function to extract GPS coordinates from image file
-        function getGPSFromFile(file) {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-
-                reader.onload = async function (e) {
-                    const arrayBuffer = e.target.result;
-
-                    try {
-                        const exifData = await exifr.parse(arrayBuffer, { gps: true });
-                        console.log('exifr data:', exifData);
-
-                        if (exifData && exifData.latitude !== undefined && exifData.longitude !== undefined) {
-                            // exifr returns coordinates already in decimal degrees
-                            console.log(`Found GPS in EXIF: ${exifData.latitude}, ${exifData.longitude}`);
-                            resolve({
-                                latitude: exifData.latitude,
-                                longitude: exifData.longitude
-                            });
-                        } else {
-                            console.log('No GPS data found in EXIF');
-                            resolve(null);
-                        }
-                    } catch (error) {
-                        console.error('Error reading EXIF data:', error);
-                        resolve(null);
-                    }
-                };
-
-                reader.onerror = function () {
-                    console.warn('Failed to read file as ArrayBuffer');
-                    resolve(null);
-                };
-
-                reader.readAsArrayBuffer(file);
-            });
-        }
-
-        // Handle form submission
-        document.getElementById('cafe-form').addEventListener('submit', async function (e) {
-            e.preventDefault();
-
-            const file = document.getElementById("photo").files[0];
-            const submitBtn = document.getElementById('submit-btn');
-
-            if (!file) {
-                alert("Please select a photo");
-                return;
-            }
-
-            // Disable button during upload
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Uploading...';
-
-            try {
-                const cafeName = document.getElementById("cafe").value.trim();
-                const rating = document.getElementById("rating").value;
-                const notes = document.getElementById("notes").value.trim();
-
-                if (!cafeName) {
-                    alert("Please enter a café name");
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Save';
-                    return;
-                }
-
-                // Extract GPS coordinates from image
-                const gpsData = await getGPSFromFile(file);
-
-                // 1. get presigned URL
-                const res = await fetch("https://1fanbo3g3k.execute-api.us-east-1.amazonaws.com/upload-url", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        contentType: file.type,
-                        cafeName: cafeName,
-                        rating: rating ? parseFloat(rating) : null,
-                        notes: notes,
-                        latitude: gpsData ? gpsData.latitude : null,
-                        longitude: gpsData ? gpsData.longitude : null
-                    })
-                });
-
-                if (!res.ok) {
-                    throw new Error('Failed to get upload URL');
-                }
-
-                const { uploadUrl, s3Key } = await res.json();
-
-                // 2. upload directly to S3
-                const uploadRes = await fetch(uploadUrl, {
-                    method: "PUT",
-                    headers: { "Content-Type": file.type },
-                    body: file
-                });
-
-                if (!uploadRes.ok) {
-                    throw new Error('Failed to upload to S3');
-                }
-
-                // 3. save metadata (later step)
-                alert("Uploaded successfully!");
-
-                // Reset form
-                document.getElementById('cafe-form').reset();
-                document.getElementById('file-preview').innerHTML = '';
-
-            } catch (error) {
-                console.error('Upload error:', error);
-                alert("Error uploading: " + error.message);
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Save';
-            }
-        });
-    </script> -->
     <script>
         const AUTH_LAMBDA_URL = "https://iowswm41jj.execute-api.us-east-1.amazonaws.com/get-token";        // replace with your Auth Lambda URL
         const PRESIGN_LAMBDA_URL = "https://1fanbo3g3k.execute-api.us-east-1.amazonaws.com/upload-url";  // replace with your Presign Lambda URL
+        const BUCKET_URL = 'https://azamcafelistphotos.s3.us-east-1.amazonaws.com';
 
         let token = null; // Store JWT token in memory
+        let storedOriginalFile = null; // Store original file for GPS extraction
+        let storedJpgFile = null; // Store converted JPG file for upload
+        let storedFormData = null; // Store form data for later upload
+        let comparisonResults = []; // Store comparison results
+        let currentComparisonIndex = 0;
+        let comparisonCafes = []; // Store cafes to compare against
 
         // --- 0. Password toggle functionality ---
         const passwordInput = document.getElementById('upload-password');
@@ -543,7 +606,6 @@
                             resolve(null);
                         }
                     } catch (err) {
-                        console.error('EXIF error:', err);
                         resolve(null);
                     }
                 };
@@ -623,27 +685,292 @@
 
         // --- 4. Get presigned URL ---
         async function getPresignedUrl(uploadData) {
-            const res = await fetch(PRESIGN_LAMBDA_URL, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify(uploadData)
-            });
-            if (!res.ok) throw new Error("Failed to get presigned URL");
-            return await res.json();
+            try {
+                const res = await fetch(PRESIGN_LAMBDA_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify(uploadData)
+                });
+
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    let errorMessage = "Failed to get presigned URL";
+                    try {
+                        const errorData = JSON.parse(errorText);
+                        errorMessage = errorData.error || errorMessage;
+                    } catch (e) {
+                        errorMessage = errorText || errorMessage;
+                    }
+
+                    if (res.status === 401) {
+                        errorMessage = "Authentication failed. Please try again.";
+                        token = null; // Clear invalid token
+                    } else if (res.status === 403) {
+                        errorMessage = "Access denied. Please check your credentials.";
+                    } else if (res.status === 0) {
+                        errorMessage = "Network error. Please check your connection and CORS settings.";
+                    }
+
+                    throw new Error(errorMessage + ` (Status: ${res.status})`);
+                }
+
+                return await res.json();
+            } catch (error) {
+                if (error.message.includes("Failed to fetch") || error.message.includes("Network error")) {
+                    throw new Error("Network error: Could not connect to server. Please check:\n1. Your internet connection\n2. CORS settings on the Lambda function\n3. The Lambda function URL is correct");
+                }
+                throw error;
+            }
         }
 
-        // --- 5. Handle form submission ---
+        // --- 5. Fetch random cafes for comparison ---
+        async function fetchRandomCafes(numCafes = 5) {
+            try {
+                // Fetch the bucket listing XML
+                const response = await fetch(`${BUCKET_URL}?list-type=2`);
+                const data = await response.text();
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(data, "text/xml");
+                const contents = xmlDoc.getElementsByTagName("Contents");
+
+                // Extract image keys
+                const imageKeys = Array.from(contents)
+                    .map(item => {
+                        const key = item.getElementsByTagName("Key")[0].textContent;
+                        if (!key.match(/\.(jpg|jpeg|png|gif)$/i)) return null;
+                        return key;
+                    })
+                    .filter(key => key !== null);
+
+                if (imageKeys.length === 0) {
+                    return [];
+                }
+
+                // Select random cafes
+                const numToSelect = Math.min(numCafes, imageKeys.length);
+                const selectedKeys = [];
+                const shuffled = [...imageKeys].sort(() => 0.5 - Math.random());
+                selectedKeys.push(...shuffled.slice(0, numToSelect));
+
+                // Fetch metadata for selected cafes
+                const cafes = [];
+                for (const key of selectedKeys) {
+                    try {
+                        const metadataResponse = await fetch(`${BUCKET_URL}/${key}`, {
+                            method: 'HEAD',
+                            mode: 'cors'
+                        });
+
+                        if (metadataResponse.ok) {
+                            const cafeName = metadataResponse.headers.get('x-amz-meta-x-amz-meta-cafe-name') ||
+                                metadataResponse.headers.get('x-amz-meta-cafe-name') || '';
+                            const neighborhood = metadataResponse.headers.get('x-amz-meta-x-amz-meta-neighborhood') ||
+                                metadataResponse.headers.get('x-amz-meta-neighborhood') || '';
+
+                            cafes.push({
+                                key: key,
+                                imageUrl: `${BUCKET_URL}/${key}`,
+                                name: cafeName || key.replace(/\.(jpg|jpeg|png|gif)$/i, '').replace(/_/g, ' '),
+                                neighborhood: neighborhood || null
+                            });
+                        }
+                    } catch (err) {
+                        // Skip cafes with metadata errors
+                    }
+                }
+
+                return cafes;
+            } catch (error) {
+                return [];
+            }
+        }
+
+        // --- 6. Display comparison UI ---
+        function displayComparison(newCafeName, newCafeNeighborhood, existingCafe) {
+            const content = document.getElementById('comparison-content');
+            const progress = document.getElementById('comparison-progress');
+
+            const newCafeNeighborhoodHtml = newCafeNeighborhood ?
+                `<div class="comparison-cafe-neighborhood">${newCafeNeighborhood}</div>` : '';
+            const existingCafeNeighborhoodHtml = existingCafe.neighborhood ?
+                `<div class="comparison-cafe-neighborhood">${existingCafe.neighborhood}</div>` : '';
+
+            // Escape HTML special characters to prevent XSS
+            const escapeHtml = (text) => {
+                if (!text) return '';
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            };
+
+            const escapedKey = escapeHtml(existingCafe.key);
+            const escapedNewCafeName = escapeHtml(newCafeName);
+            const escapedExistingCafeName = escapeHtml(existingCafe.name);
+
+            content.innerHTML = `
+                <div class="comparison-container" id="comparison-container">
+                    <div class="comparison-cafe" id="new-cafe-card" data-cafe-key="${escapedKey}" data-score="1">
+                        <div class="comparison-cafe-name">${escapedNewCafeName}</div>
+                        ${newCafeNeighborhoodHtml}
+                    </div>
+                    <div class="comparison-or">OR</div>
+                    <div class="comparison-cafe" id="existing-cafe-card" data-cafe-key="${escapedKey}" data-score="0">
+                        <div class="comparison-cafe-name">${escapedExistingCafeName}</div>
+                        ${existingCafeNeighborhoodHtml}
+                    </div>
+                </div>
+                <button class="comparison-cant-decide" data-cafe-key="${escapedKey}" data-score="0.5">
+                    I can't decide
+                </button>
+            `;
+
+            progress.textContent = `Comparison ${currentComparisonIndex + 1} of ${comparisonCafes.length}`;
+
+            // Attach event listeners instead of using inline onclick
+            document.getElementById('new-cafe-card').addEventListener('click', function () {
+                handleComparison(1, existingCafe.key);
+            });
+            document.getElementById('existing-cafe-card').addEventListener('click', function () {
+                handleComparison(0, existingCafe.key);
+            });
+            document.querySelector('.comparison-cant-decide').addEventListener('click', function () {
+                handleComparison(0.5, existingCafe.key);
+            });
+        }
+
+
+        // --- 7. Handle comparison selection ---
+        window.handleComparison = function (score, cafeKey) {
+            comparisonResults.push([cafeKey, score]);
+            currentComparisonIndex++;
+
+            if (currentComparisonIndex < comparisonCafes.length) {
+                // Show next comparison
+                const newCafeName = document.getElementById('cafe').value.trim();
+
+                // Get neighborhood for new cafe (if available from stored data)
+                const newCafeNeighborhood = storedFormData?.neighborhood || null;
+
+                displayComparison(
+                    newCafeName,
+                    newCafeNeighborhood,
+                    comparisonCafes[currentComparisonIndex]
+                );
+            } else {
+                // All comparisons done, show loading spinner and proceed with upload
+                const content = document.getElementById('comparison-content');
+                const progress = document.getElementById('comparison-progress');
+                content.innerHTML = `
+                    <div class="upload-status">
+                        <div class="spinner"></div>
+                        <h3>Logging café...</h3>
+                    </div>
+                `;
+                progress.textContent = '';
+                proceedWithUpload();
+            }
+        };
+
+        // --- 8. Proceed with upload after comparisons ---
+        async function proceedWithUpload() {
+            // Loading spinner is already shown by handleComparison if coming from comparisons
+            // If called directly (no cafes to compare), show spinner now
+            if (comparisonCafes.length === 0) {
+                const content = document.getElementById('comparison-content');
+                content.innerHTML = `
+                    <div class="upload-status">
+                        <div class="spinner"></div>
+                        <h3>Uploading your café...</h3>
+                        <p style="color: #718096; margin-top: 0.5rem;">Please wait while we process your upload</p>
+                    </div>
+                `;
+            }
+
+            try {
+                // Use stored data
+                const jpgFile = storedJpgFile;
+                const originalFile = storedOriginalFile || document.getElementById("photo").files[0];
+                const cafeName = storedFormData?.cafeName || document.getElementById("cafe").value.trim();
+                const rating = storedFormData?.rating || document.getElementById("rating").value;
+                const notes = storedFormData?.notes || document.getElementById("notes").value.trim();
+                const password = storedFormData?.password || document.getElementById("upload-password").value;
+
+                if (!jpgFile) {
+                    throw new Error("Converted image not found. Please try uploading again.");
+                }
+
+                // --- 1. Get token if not already, or refresh if expired ---
+                if (!token) {
+                    token = await getToken(password);
+                } else {
+                    // Token might have expired during comparisons (tokens are valid for 5 minutes)
+                    // Try to refresh it if we have the password
+                    try {
+                        // Simple check: if token exists but might be old, refresh it
+                        // Since tokens expire in 5 minutes and comparisons might take longer, refresh proactively
+                        token = await getToken(password);
+                    } catch (err) {
+                        // If refresh fails, try to continue with existing token
+                    }
+                }
+
+                // --- 2. Extract GPS from original file ---
+                const gpsData = originalFile ? await getGPSFromFile(originalFile) : null;
+
+                // --- 4. Get presigned URL with comparison results ---
+                // Use the file's actual content type (could be JPG, HEIC, etc.)
+                const uploadData = {
+                    contentType: jpgFile.type || 'image/jpeg',
+                    cafeName,
+                    rating: rating ? parseFloat(rating) : null,
+                    notes,
+                    latitude: gpsData ? gpsData.latitude : null,
+                    longitude: gpsData ? gpsData.longitude : null,
+                    comparisons: comparisonResults
+                };
+                const { uploadUrl, s3Key } = await getPresignedUrl(uploadData);
+
+                // --- 5. Upload file to S3 ---
+                const uploadRes = await fetch(uploadUrl, {
+                    method: "PUT",
+                    headers: { "Content-Type": jpgFile.type || "image/jpeg" },
+                    body: jpgFile
+                });
+                if (!uploadRes.ok) throw new Error("Failed to upload to S3");
+
+                alert("Uploaded successfully!");
+                document.getElementById('cafe-form').reset();
+                document.getElementById('cafe-form').style.display = 'block';
+                document.getElementById('file-preview').innerHTML = '';
+                document.getElementById('comparison-section').classList.remove('active');
+                document.getElementById('comparison-content').innerHTML = '<div class="comparison-loading">Loading cafes for comparison...</div>';
+                comparisonResults = [];
+                currentComparisonIndex = 0;
+                comparisonCafes = [];
+                storedOriginalFile = null;
+                storedJpgFile = null;
+                storedFormData = null;
+                token = null;
+
+            } catch (error) {
+                alert("Upload error: " + error.message);
+                token = null;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Next: Compare Cafés';
+            }
+        }
+
+        // --- 9. Handle form submission ---
         document.getElementById('cafe-form').addEventListener('submit', async function (e) {
             e.preventDefault();
 
             const file = document.getElementById("photo").files[0];
             const submitBtn = document.getElementById('submit-btn');
             const cafeName = document.getElementById("cafe").value.trim();
-            const rating = document.getElementById("rating").value;
-            const notes = document.getElementById("notes").value.trim();
             const password = document.getElementById("upload-password").value;
 
             if (!file || !cafeName || !password) {
@@ -651,8 +978,29 @@
                 return;
             }
 
+            // Store original file for GPS extraction
+            storedOriginalFile = file;
+
+            const rating = document.getElementById("rating").value;
+            const notes = document.getElementById("notes").value.trim();
+
+            // Extract GPS to get neighborhood
+            const gpsData = await getGPSFromFile(file);
+            let neighborhood = null;
+
+            // Try to get neighborhood from GPS (this would need to be computed, but for now we'll leave it null)
+            // The neighborhood will be computed server-side when uploading
+
+            storedFormData = {
+                cafeName: cafeName,
+                rating: rating,
+                notes: notes,
+                password: password,
+                neighborhood: neighborhood
+            };
+
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Converting...';
+            submitBtn.textContent = 'Converting image...';
 
             try {
                 // --- 1. Get token if not already ---
@@ -660,49 +1008,60 @@
                     token = await getToken(password);
                 }
 
-                // --- 2. Convert image to JPG ---
-                submitBtn.textContent = 'Converting image...';
-                const jpgFile = await convertToJPG(file);
+                // --- 2. Convert image to JPG immediately and store it ---
+                try {
+                    storedJpgFile = await convertToJPG(file);
+                } catch (conversionError) {
+                    // Check if it's a HEIC file
+                    const fileName = file.name.toLowerCase();
+                    const isHeic = file.type === 'image/heic' || file.type === 'image/heif' ||
+                        fileName.endsWith('.heic') || fileName.endsWith('.heif');
 
-                // --- Update button text for upload phase ---
-                submitBtn.textContent = 'Uploading...';
+                    // If conversion fails, try to use original file as fallback
+                    if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
+                        storedJpgFile = file;
+                    } else if (isHeic) {
+                        // HEIC files can't be converted in browser, upload directly
+                        storedJpgFile = file;
+                    } else {
+                        alert('Failed to process image: ' + conversionError.message + '\n\nPlease try selecting a different image file (JPG, PNG, or HEIC).');
+                        throw conversionError;
+                    }
+                }
 
-                // --- 3. Extract GPS from original file (before conversion) ---
-                const gpsData = await getGPSFromFile(file);
+                // --- 3. Fetch random cafes for comparison ---
+                submitBtn.textContent = 'Loading comparisons...';
+                comparisonCafes = await fetchRandomCafes(5);
+                currentComparisonIndex = 0;
+                comparisonResults = [];
 
-                // --- 4. Get presigned URL ---
-                const uploadData = {
-                    contentType: 'image/jpeg',
+                if (comparisonCafes.length === 0) {
+                    // No cafes to compare, show comparison section with loading and proceed to upload
+                    document.getElementById('cafe-form').style.display = 'none';
+                    document.getElementById('comparison-section').classList.add('active');
+                    proceedWithUpload();
+                    return;
+                }
+
+                // --- 3. Show comparison section ---
+                document.getElementById('cafe-form').style.display = 'none';
+                document.getElementById('comparison-section').classList.add('active');
+
+                // --- 4. Display first comparison ---
+                displayComparison(
                     cafeName,
-                    rating: rating ? parseFloat(rating) : null,
-                    notes,
-                    latitude: gpsData ? gpsData.latitude : null,
-                    longitude: gpsData ? gpsData.longitude : null
-                };
-                const { uploadUrl, s3Key } = await getPresignedUrl(uploadData);
-
-                // --- 5. Upload file to S3 ---
-                const uploadRes = await fetch(uploadUrl, {
-                    method: "PUT",
-                    headers: { "Content-Type": "image/jpeg" },
-                    body: jpgFile
-                });
-                if (!uploadRes.ok) throw new Error("Failed to upload to S3");
-
-                alert("Uploaded successfully!");
-                document.getElementById('cafe-form').reset();
-                document.getElementById('file-preview').innerHTML = '';
-                token = null; // optional: clear token after upload
+                    storedFormData.neighborhood,
+                    comparisonCafes[0]
+                );
 
             } catch (error) {
-                console.error(error);
-                alert("Upload error: " + error.message);
-                token = null; // reset token if failed
+                alert("Error: " + error.message);
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Save';
+                submitBtn.textContent = 'Next: Compare Cafés';
             }
         });
+
     </script>
 
 </body>

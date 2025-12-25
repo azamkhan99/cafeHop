@@ -352,23 +352,7 @@
         function parseCafeInfo(filename) {
             const nameWithoutExt = filename.replace(/\.[^/.]+$/, "");
 
-            if (nameWithoutExt.endsWith('_unvisited')) {
-                return {
-                    name: nameWithoutExt.replace('_unvisited', ''),
-                    visited: false,
-                    stars: 0
-                };
-            }
-
-            const match = nameWithoutExt.match(/_(\d+)_STARS$/);
-            if (match) {
-                return {
-                    name: nameWithoutExt.replace(/_\d+_STARS$/, ''),
-                    visited: true,
-                    stars: parseInt(match[1])
-                };
-            }
-
+            // All cafes are visited - rating will come from metadata
             return {
                 name: nameWithoutExt,
                 visited: true,
@@ -441,7 +425,7 @@
             return dd;
         }
 
-        // Function to fetch GPS coordinates from S3 metadata
+        // Function to fetch GPS coordinates and rating from S3 metadata
         async function getS3Metadata(key) {
             try {
                 const response = await fetch(`${BUCKET_URL}/${key}`, {
@@ -450,12 +434,21 @@
                 });
 
                 if (response.ok) {
-                    const latitude = response.headers.get('x-amz-meta-latitude');
-                    const longitude = response.headers.get('x-amz-meta-longitude');
+                    // S3 stores metadata with double prefix: x-amz-meta-x-amz-meta-...
+                    const latitude = response.headers.get('x-amz-meta-x-amz-meta-latitude') ||
+                        response.headers.get('x-amz-meta-latitude');
+                    const longitude = response.headers.get('x-amz-meta-x-amz-meta-longitude') ||
+                        response.headers.get('x-amz-meta-longitude');
+                    const ratingStr = response.headers.get('x-amz-meta-x-amz-meta-rating') ||
+                        response.headers.get('x-amz-meta-rating');
+                    const rating = ratingStr ? parseInt(ratingStr, 10) : null;
 
                     if (latitude && longitude) {
                         console.log(`✓ Found GPS metadata for ${key}: ${latitude}, ${longitude}`);
-                        return [parseFloat(latitude), parseFloat(longitude)];
+                        return {
+                            coordinates: [parseFloat(latitude), parseFloat(longitude)],
+                            rating: rating
+                        };
                     } else {
                         console.log(`✗ No GPS metadata headers found for ${key}`);
                         // Debug: log all available headers
@@ -538,8 +531,15 @@
                     const imageUrl = `${BUCKET_URL}/${key}`;
                     const cafeInfo = parseCafeInfo(key);
 
-                    // Try to get GPS coordinates from S3 metadata first (most reliable)
-                    let coordinates = await getS3Metadata(key);
+                    // Try to get GPS coordinates and rating from S3 metadata first (most reliable)
+                    let metadata = await getS3Metadata(key);
+                    let coordinates = null;
+                    let rating = 0;
+
+                    if (metadata) {
+                        coordinates = metadata.coordinates;
+                        rating = metadata.rating !== null ? metadata.rating : 0;
+                    }
 
                     // If no S3 metadata, try EXIF GPS data from image
                     if (!coordinates) {
@@ -552,8 +552,11 @@
                         return null;
                     }
 
+                    // Use rating from metadata, fallback to 0
+                    const stars = rating;
+
                     // Create custom icon based on star rating - using Font Awesome coffee icon
-                    const iconColor = getIconColorByStars(cafeInfo.stars);
+                    const iconColor = getIconColorByStars(stars);
                     const customIcon = L.divIcon({
                         className: 'custom-div-icon',
                         html: `<i class="fas fa-coffee" style="font-size: 18px; color: ${iconColor};"></i>`,
@@ -562,7 +565,7 @@
                     });
 
                     // Create popup content
-                    const starsHtml = `<div class="popup-stars">${generateStars(cafeInfo.stars)}</div>`;
+                    const starsHtml = `<div class="popup-stars">${generateStars(stars)}</div>`;
 
                     const popupContent = `
                         <div class="custom-popup">
@@ -578,7 +581,7 @@
                         popup: popupContent,
                         // Also store raw data for caching
                         name: cafeInfo.name,
-                        stars: cafeInfo.stars,
+                        stars: stars,
                         imageUrl: imageUrl,
                         key: key
                     };

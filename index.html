@@ -238,9 +238,6 @@
             transition: filter 0.3s ease;
         }
 
-        .unvisited .cafe-image {
-            filter: grayscale(100%);
-        }
 
         .stars-overlay {
             position: absolute;
@@ -398,7 +395,7 @@
             <a href="map.html" class="nav-button">Map View</a>
             <a href="add.html" class="nav-button">Add Café</a>
         </div>
-        <button class="sort-toggle" id="toggle-sort">Sort A/Z</button>
+        <button class="sort-toggle" id="toggle-sort">RATING</button>
     </div>
 
     <div class="toggle-container">
@@ -451,7 +448,7 @@
         const CACHE_KEY = 'cafeGalleryData';
         const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes cache
         const MAX_CONCURRENT_REQUESTS = 10; // Limit concurrent HEAD requests
-        let currentSort = 'recent'; // Default sort by most recent
+        let currentSort = 'rating'; // Default sort by ELO rating
         let currentNeighborhoodFilter = 'all';
         let cachedCafes = null; // Cache cafes in memory so sort/filter don't refetch S3
 
@@ -521,26 +518,7 @@
             // Remove file extension
             const nameWithoutExt = filename.replace(/\.[^/.]+$/, "");
 
-            // Check if unvisited
-            if (nameWithoutExt.endsWith('_unvisited')) {
-                return {
-                    name: nameWithoutExt.replace('_unvisited', ''),
-                    visited: false,
-                    stars: 0
-                };
-            }
-
-            // Extract stars for visited cafes
-            const match = nameWithoutExt.match(/_(\d+)_STARS$/);
-            if (match) {
-                return {
-                    name: nameWithoutExt.replace(/_\d+_STARS$/, ''),
-                    visited: true,
-                    stars: parseInt(match[1])
-                };
-            }
-
-            // Default case
+            // All cafes are visited - rating will come from metadata
             return {
                 name: nameWithoutExt,
                 visited: true,
@@ -555,15 +533,28 @@
 
         // Function to sort cafes by name
         function sortByName(cafes) {
-            return cafes.sort((a, b) => a.name.localeCompare(b.name));
+            // Create a copy to avoid mutating the original array
+            return [...cafes].sort((a, b) => a.name.localeCompare(b.name));
         }
 
-        // Function to sort cafes by most recent (based on file upload time)
-        function sortByRecent(cafes) {
-            return cafes.sort((a, b) => new Date(b.lastModified) - new Date(a.lastModified));
+        // Function to sort cafes by ELO rating (highest first)
+        function sortByEloRating(cafes) {
+            // Create a copy to avoid mutating the original array
+            return [...cafes].sort((a, b) => {
+                const ratingA = a.eloRating !== null && a.eloRating !== undefined ? parseFloat(a.eloRating) : -Infinity;
+                const ratingB = b.eloRating !== null && b.eloRating !== undefined ? parseFloat(b.eloRating) : -Infinity;
+
+                // Primary sort: by ELO rating (descending)
+                if (ratingA !== ratingB) {
+                    return ratingB - ratingA;
+                }
+
+                // Secondary sort: by name (ascending) when ratings are equal
+                return a.name.localeCompare(b.name);
+            });
         }
 
-        // Combined function to fetch both neighborhood and subway routes from S3 metadata in one request
+        // Combined function to fetch neighborhood, subway routes, and rating from S3 metadata in one request
         async function getMetadataFromS3(key) {
             try {
                 const response = await fetch(`${BUCKET_URL}/${key}`, {
@@ -583,12 +574,24 @@
                         ? routes.split(',').map(r => r.trim().toLowerCase()).filter(r => r)
                         : null;
 
-                    return { neighborhood, subwayRoutes };
+                    const ratingStr = response.headers.get('x-amz-meta-x-amz-meta-rating') ||
+                        response.headers.get('x-amz-meta-rating');
+                    const rating = ratingStr ? parseInt(ratingStr, 10) : null;
+
+                    // Try multiple header name variations for elo_rating
+                    const eloRatingStr = response.headers.get('x-amz-meta-x-amz-meta-elo_rating') ||
+                        response.headers.get('x-amz-meta-elo_rating') ||
+                        response.headers.get('x-amz-meta-x-amz-meta-elo-rating') ||
+                        response.headers.get('x-amz-meta-elo-rating');
+                    const eloRating = eloRatingStr ? parseFloat(eloRatingStr) : null;
+
+
+                    return { neighborhood, subwayRoutes, rating, eloRating };
                 }
             } catch (error) {
                 // Silently fail - metadata will just not be displayed
             }
-            return { neighborhood: null, subwayRoutes: null };
+            return { neighborhood: null, subwayRoutes: null, rating: null, eloRating: null };
         }
 
         // Function to generate subway icon HTML using sprite
@@ -622,10 +625,19 @@
                 if (!cachedCafes) {
                     // Try to load from localStorage cache first
                     const cachedData = getCachedData();
-                    if (cachedData) {
+                    // Check if cache has eloRating property AND at least one cafe has a non-null eloRating
+                    const hasValidEloRating = cachedData && cachedData.length > 0 &&
+                        cachedData[0].hasOwnProperty('eloRating') &&
+                        cachedData.some(cafe => cafe.eloRating !== null && cafe.eloRating !== undefined);
+
+                    if (hasValidEloRating) {
                         cachedCafes = cachedData;
                         // Continue to render immediately with cached data
                     } else {
+                        // Clear invalid cache (missing eloRating or all null)
+                        if (cachedData) {
+                            localStorage.removeItem(CACHE_KEY);
+                        }
                         // Fetch the bucket listing XML
                         const response = await fetch(`${BUCKET_URL}?list-type=2`);
                         const data = await response.text();
@@ -663,10 +675,14 @@
                             baseCafes,
                             async (cafe) => {
                                 const metadata = await getMetadataFromS3(cafe.key);
+                                // Update stars from metadata rating if available (only for visited cafes)
+                                const stars = metadata.rating !== null ? metadata.rating : cafe.stars;
                                 return {
                                     ...cafe,
                                     neighborhood: metadata.neighborhood,
-                                    subwayRoutes: metadata.subwayRoutes
+                                    subwayRoutes: metadata.subwayRoutes,
+                                    stars: stars,
+                                    eloRating: metadata.eloRating
                                 };
                             },
                             MAX_CONCURRENT_REQUESTS
@@ -713,7 +729,7 @@
                     : cafes.filter(cafe => cafe.neighborhood === currentNeighborhoodFilter);
 
                 // Sort cafes based on current sort mode
-                const sortedCafes = currentSort === 'name' ? sortByName(filteredCafes) : sortByRecent(filteredCafes);
+                const sortedCafes = currentSort === 'name' ? sortByName(filteredCafes) : sortByEloRating(filteredCafes);
 
                 // Render sorted cafes incrementally to avoid blocking UI
                 await renderCafesIncrementally(sortedCafes, gallery);
@@ -751,13 +767,13 @@
         // Extract card creation into a separate function for reusability
         function createCafeCard(cafe) {
             const card = document.createElement('div');
-            card.className = `cafe-card ${cafe.visited ? 'visited' : 'unvisited'}`;
+            card.className = 'cafe-card visited';
 
-            const starsHtml = cafe.visited ? `
+            const starsHtml = `
                 <div class="stars-overlay">
                     ${generateStars(cafe.stars)}
                 </div>
-            ` : '';
+            `;
 
             const neighborhoodHtml = cafe.neighborhood
                 ? `<div class="cafe-neighborhood">${cafe.neighborhood}</div>`
@@ -793,17 +809,16 @@
                 // Only trigger if it's a quick tap (not a swipe or long press)
                 if (touchDuration < 300 && touchDistance < 10) {
                     e.preventDefault();
-                    toggleStars(card, cafe.visited);
+                    toggleStars(card);
                 }
             });
 
             card.addEventListener('click', function (e) {
                 // For mouse clicks on desktop
-                toggleStars(card, cafe.visited);
+                toggleStars(card);
             });
 
-            function toggleStars(cardElement, isVisited) {
-                if (!isVisited) return;
+            function toggleStars(cardElement) {
 
                 // Check if this card is already showing stars
                 const isShowing = cardElement.classList.contains('show-stars');
@@ -826,12 +841,12 @@
         const sortButton = document.getElementById('toggle-sort');
         function updateSortLabel() {
             if (!sortButton) return;
-            sortButton.textContent = currentSort === 'recent' ? 'RECENT' : 'A/Z';
+            sortButton.textContent = currentSort === 'rating' ? 'RATING' : 'A/Z';
         }
 
         if (sortButton) {
             sortButton.addEventListener('click', () => {
-                currentSort = currentSort === 'recent' ? 'name' : 'recent';
+                currentSort = currentSort === 'rating' ? 'name' : 'rating';
                 updateSortLabel();
                 loadImages();
             });
