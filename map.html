@@ -12,6 +12,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/exif-js@2.3.0/exif.js"></script>
@@ -164,26 +166,57 @@
             flex-shrink: 0;
         }
 
+        /* Override Leaflet's default popup styles using custom class for better specificity */
+        .custom-popup-wrapper.leaflet-popup-content-wrapper {
+            padding: 0;
+            border-radius: 4px;
+        }
+
+        .custom-popup-wrapper .leaflet-popup-content {
+            margin: 0;
+            padding: 0;
+        }
+
         .custom-popup {
             text-align: center;
+            background: white;
+            padding: 1.2rem 0.1rem 0.1rem 0.1rem;
+            margin: 0;
+            min-width: 100px;
+            max-width: 120px;
+
+            border-radius: 8px;
+            overflow: hidden;
         }
 
         .popup-image {
-            width: 100px;
-            height: 100px;
+            width: calc(100% - 0.3rem);
+            height: 70px;
             object-fit: cover;
-            border-radius: 8px;
-            margin-bottom: 0.5rem;
+            border-radius: 0;
+            margin: 0 auto 0.2rem auto;
+            display: block;
+            box-shadow: none;
+            filter: contrast(1.05) saturate(1.05);
         }
 
         .popup-name {
-            font-weight: bold;
-            margin-bottom: 0.5rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #000000;
+            padding: 0;
+            margin: 0 0 0.2rem 0;
+            text-align: center;
+            line-height: 1.2;
         }
 
         .popup-stars {
-            color: gold;
-            font-size: 1.2rem;
+            color: #000000;
+            font-size: 0.7rem;
+            padding: 0;
+            margin: 0;
+            text-align: center;
         }
 
         @media (max-width: 768px) {
@@ -280,6 +313,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         const BUCKET_URL = 'https://azamcafelistphotos.s3.us-east-1.amazonaws.com';
+        const CAFES_JSON_URL = `${BUCKET_URL}/cafes.json`;
         const CACHE_KEY = 'cafeMapData';
         const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
 
@@ -331,9 +365,12 @@
             });
 
             const starsHtml = `<div class="popup-stars">${generateStars(cafe.stars)}</div>`;
+            // Use map-specific thumbnail for faster loading, fallback to gallery thumbnail, then full image
+            const imageSrc = cafe.mapThumbnailUrl || cafe.thumbnailUrl || cafe.imageUrl;
+
             const popupContent = `
                 <div class="custom-popup">
-                    <img src="${cafe.imageUrl}" alt="${cafe.name}" class="popup-image">
+                    <img src="${imageSrc}" alt="${cafe.name}" class="popup-image">
                     <div class="popup-name">${cafe.name}</div>
                     ${starsHtml}
                 </div>
@@ -360,13 +397,27 @@
             };
         }
 
-        // Function to generate star rating HTML
+        // Function to generate star rating HTML (supports half ratings with ½ symbol)
         function generateStars(count) {
-            return '★'.repeat(count);
+            if (count === null || count === undefined || count === 0) {
+                return '';
+            }
+
+            const fullStars = Math.floor(count);
+            const hasHalf = count % 1 >= 0.5;
+
+            let result = '★'.repeat(fullStars);
+            if (hasHalf) {
+                result += '½';
+            }
+
+            return result;
         }
 
-        // Function to get icon color based on star rating
+        // Function to get icon color based on star rating (handles decimal values by rounding)
         function getIconColorByStars(stars) {
+            // Round to nearest integer for color mapping
+            const roundedStars = Math.round(stars);
             const colorMap = {
                 0: '#a0aec0',  // gray
                 1: '#ef4444',  // red
@@ -375,7 +426,7 @@
                 4: '#84cc16',  // light green
                 5: '#48bb78'   // dark green
             };
-            return colorMap[stars] || colorMap[0];
+            return colorMap[roundedStars] || colorMap[0];
         }
 
 
@@ -425,47 +476,6 @@
             return dd;
         }
 
-        // Function to fetch GPS coordinates and rating from S3 metadata
-        async function getS3Metadata(key) {
-            try {
-                const response = await fetch(`${BUCKET_URL}/${key}`, {
-                    method: 'HEAD',
-                    mode: 'cors'
-                });
-
-                if (response.ok) {
-                    // S3 stores metadata with double prefix: x-amz-meta-x-amz-meta-...
-                    const latitude = response.headers.get('x-amz-meta-x-amz-meta-latitude') ||
-                        response.headers.get('x-amz-meta-latitude');
-                    const longitude = response.headers.get('x-amz-meta-x-amz-meta-longitude') ||
-                        response.headers.get('x-amz-meta-longitude');
-                    const ratingStr = response.headers.get('x-amz-meta-x-amz-meta-rating') ||
-                        response.headers.get('x-amz-meta-rating');
-                    const rating = ratingStr ? parseInt(ratingStr, 10) : null;
-
-                    if (latitude && longitude) {
-                        console.log(`✓ Found GPS metadata for ${key}: ${latitude}, ${longitude}`);
-                        return {
-                            coordinates: [parseFloat(latitude), parseFloat(longitude)],
-                            rating: rating
-                        };
-                    } else {
-                        console.log(`✗ No GPS metadata headers found for ${key}`);
-                        // Debug: log all available headers
-                        console.log('Available headers:', Array.from(response.headers.entries()));
-                    }
-                } else {
-                    console.warn(`HTTP error for ${key}: ${response.status} ${response.statusText}`);
-                }
-            } catch (error) {
-                console.warn(`Failed to fetch metadata for ${key}:`, error.message);
-                // If CORS fails, we might need to use a different approach
-                if (error.message.includes('CORS')) {
-                    console.log('CORS issue detected - will try EXIF extraction instead');
-                }
-            }
-            return null;
-        }
 
         async function loadMap() {
             // Initialize map
@@ -489,9 +499,14 @@
                     // Add markers from cache immediately
                     cachedCafes.forEach(cafe => {
                         const markerData = createMarkerFromCachedData(cafe);
+                        const popupOptions = {
+                            className: 'custom-popup-wrapper',
+                            maxWidth: 120,
+                            minWidth: 100
+                        };
                         L.marker(markerData.coordinates, { icon: markerData.icon })
                             .addTo(map)
-                            .bindPopup(markerData.popup);
+                            .bindPopup(markerData.popup, popupOptions);
                     });
 
                     // Fetch fresh data in background and update cache
@@ -509,51 +524,40 @@
 
         async function fetchAndUpdateMap(map, backgroundUpdate = false) {
             try {
-                // Fetch the bucket listing XML
-                const response = await fetch(`${BUCKET_URL}?list-type=2`);
-                const data = await response.text();
-                const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(data, "text/xml");
-                const contents = xmlDoc.getElementsByTagName("Contents");
-
                 if (!backgroundUpdate) {
                     // Hide loading message only if not background update
                     document.getElementById('loading').style.display = 'none';
                 }
 
-                // Process each object and add markers
-                const cafePromises = Array.from(contents).map(async (item) => {
-                    const key = item.getElementsByTagName("Key")[0].textContent;
+                // Fetch cafes.json from S3
+                const response = await fetch(CAFES_JSON_URL);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch cafes.json: ${response.status}`);
+                }
 
-                    // Skip if not an image file
-                    if (!key.match(/\.(jpg|jpeg|png|gif)$/i)) return null;
+                const jsonData = await response.json();
+                const cafesFromJson = jsonData.cafes || [];
 
-                    const imageUrl = `${BUCKET_URL}/${key}`;
-                    const cafeInfo = parseCafeInfo(key);
-
-                    // Try to get GPS coordinates and rating from S3 metadata first (most reliable)
-                    let metadata = await getS3Metadata(key);
+                // Process cafes and add markers
+                const cafePromises = cafesFromJson.map(async (cafe) => {
+                    // Skip if no GPS coordinates
                     let coordinates = null;
-                    let rating = 0;
-
-                    if (metadata) {
-                        coordinates = metadata.coordinates;
-                        rating = metadata.rating !== null ? metadata.rating : 0;
-                    }
-
-                    // If no S3 metadata, try EXIF GPS data from image
-                    if (!coordinates) {
+                    if (cafe.latitude && cafe.longitude) {
+                        coordinates = [cafe.latitude, cafe.longitude];
+                    } else {
+                        // Try EXIF GPS as fallback
+                        const imageUrl = cafe.imageUrl || `${BUCKET_URL}/${cafe.key}`;
                         coordinates = await getGPSFromImage(imageUrl);
+                        if (!coordinates) {
+                            console.log(`Skipping ${cafe.name} - no GPS coordinates found`);
+                            return null;
+                        }
                     }
 
-                    // Skip this cafe if no GPS coordinates are found
-                    if (!coordinates) {
-                        console.log(`Skipping ${cafeInfo.name} - no GPS coordinates found`);
-                        return null;
-                    }
-
-                    // Use rating from metadata, fallback to 0
-                    const stars = rating;
+                    const stars = cafe.eloStarRating || 0;
+                    const imageUrl = cafe.imageUrl || `${BUCKET_URL}/${cafe.key}`;
+                    // Use map-specific thumbnail for faster loading, fallback to gallery thumbnail, then full image
+                    const imageSrc = cafe.mapThumbnailUrl || cafe.thumbnailUrl || imageUrl;
 
                     // Create custom icon based on star rating - using Font Awesome coffee icon
                     const iconColor = getIconColorByStars(stars);
@@ -569,8 +573,8 @@
 
                     const popupContent = `
                         <div class="custom-popup">
-                            <img src="${imageUrl}" alt="${cafeInfo.name}" class="popup-image">
-                            <div class="popup-name">${cafeInfo.name}</div>
+                            <img src="${imageSrc}" alt="${cafe.name}" class="popup-image">
+                            <div class="popup-name">${cafe.name}</div>
                             ${starsHtml}
                         </div>
                     `;
@@ -580,14 +584,16 @@
                         icon: customIcon,
                         popup: popupContent,
                         // Also store raw data for caching
-                        name: cafeInfo.name,
+                        name: cafe.name,
                         stars: stars,
                         imageUrl: imageUrl,
-                        key: key
+                        thumbnailUrl: cafe.thumbnailUrl || imageUrl,
+                        mapThumbnailUrl: cafe.mapThumbnailUrl || cafe.thumbnailUrl || imageUrl,
+                        key: cafe.key
                     };
                 });
 
-                // Wait for all metadata requests to complete
+                // Wait for all EXIF extraction requests to complete (if any)
                 const cafeData = await Promise.all(cafePromises);
                 const validCafes = cafeData.filter(cafe => cafe !== null);
 
@@ -597,16 +603,25 @@
                     name: cafe.name,
                     stars: cafe.stars,
                     imageUrl: cafe.imageUrl,
+                    thumbnailUrl: cafe.thumbnailUrl || cafe.imageUrl,
+                    mapThumbnailUrl: cafe.mapThumbnailUrl || cafe.thumbnailUrl || cafe.imageUrl,
                     key: cafe.key
                 }));
                 setCachedData(cacheData);
+
+                // Popup options to control styling
+                const popupOptions = {
+                    className: 'custom-popup-wrapper',
+                    maxWidth: 120,
+                    minWidth: 100
+                };
 
                 if (!backgroundUpdate) {
                     // Add markers to map (only if not background update)
                     validCafes.forEach(cafe => {
                         L.marker(cafe.coordinates, { icon: cafe.icon })
                             .addTo(map)
-                            .bindPopup(cafe.popup);
+                            .bindPopup(cafe.popup, popupOptions);
                     });
                 } else {
                     console.log('Background update completed, cache refreshed');
@@ -619,7 +634,7 @@
                     validCafes.forEach(cafe => {
                         L.marker(cafe.coordinates, { icon: cafe.icon })
                             .addTo(map)
-                            .bindPopup(cafe.popup);
+                            .bindPopup(cafe.popup, popupOptions);
                     });
                 }
 

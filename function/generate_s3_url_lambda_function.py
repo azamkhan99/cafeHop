@@ -2,6 +2,8 @@ import json
 import boto3
 import os
 import random
+from io import BytesIO
+from PIL import Image, ImageOps
 
 # Import utils for computing neighborhood and subway station
 try:
@@ -159,6 +161,227 @@ def compute_initial_elo_rating(comparisons=None):
     # Start slightly below average to be conservative
     return average_elo - 50.0
 
+def update_cafes_json(cafe_data):
+    """
+    Update the cafes.json file in S3 with new cafe data.
+    Reads existing JSON, adds/updates the cafe entry, and writes back.
+    
+    Args:
+        cafe_data: dict with cafe information (key, name, imageUrl, etc.)
+    
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    CAFES_JSON_KEY = "cafes.json"
+    
+    try:
+        # Try to read existing JSON file
+        try:
+            response = s3.get_object(Bucket=BUCKET, Key=CAFES_JSON_KEY)
+            existing_data = json.loads(response['Body'].read().decode('utf-8'))
+            cafes = existing_data.get('cafes', [])
+        except s3.exceptions.NoSuchKey:
+            # File doesn't exist yet, start with empty list
+            cafes = []
+        
+        # Remove existing entry with same key if it exists (for updates)
+        cafes = [c for c in cafes if c.get('key') != cafe_data.get('key')]
+        
+        # Add new cafe entry
+        cafes.append(cafe_data)
+        
+        # Sort by ELO star rating (highest first), then by name
+        # This matches the default client-side sort for better initial load performance
+        def sort_key(cafe):
+            elo_star = cafe.get('eloStarRating')
+            if elo_star is None:
+                elo_star = -float('inf')
+            else:
+                try:
+                    elo_star = float(elo_star)
+                except (ValueError, TypeError):
+                    elo_star = -float('inf')
+            name = cafe.get('name', '')
+            # Return tuple for multi-level sort: (-rating for desc, name for asc)
+            return (-elo_star, name)
+        
+        cafes.sort(key=sort_key)
+        
+        # Write back to S3
+        from datetime import datetime
+        updated_data = {
+            'cafes': cafes,
+            'lastUpdated': datetime.utcnow().isoformat() + 'Z'
+        }
+        
+        s3.put_object(
+            Bucket=BUCKET,
+            Key=CAFES_JSON_KEY,
+            Body=json.dumps(updated_data, indent=2),
+            ContentType='application/json',
+            CacheControl='max-age=300'  # Cache for 5 minutes
+        )
+        
+        print(f"Successfully updated cafes.json with cafe: {cafe_data.get('key')}")
+        return True
+        
+    except Exception as e:
+        print(f"Error updating cafes.json: {e}")
+        return False
+
+def handle_update_cafes(event, context):
+    """
+    Handle request to update cafes.json after an upload completes.
+    Client calls this after successfully uploading to S3.
+    """
+    try:
+        body = json.loads(event.get("body", "{}"))
+        key = body.get("s3Key")
+        
+        if not key:
+            return {
+                "statusCode": 400,
+                "headers": CORS_HEADERS,
+                "body": json.dumps({"error": "s3Key is required"})
+            }
+        
+        # Get the uploaded object's metadata and LastModified
+        try:
+            response = s3.head_object(Bucket=BUCKET, Key=key)
+            metadata = response.get('Metadata', {})
+            last_modified = response.get('LastModified', '').isoformat() if response.get('LastModified') else ''
+        except Exception as e:
+            return {
+                "statusCode": 404,
+                "headers": CORS_HEADERS,
+                "body": json.dumps({"error": f"Object not found: {e}"})
+            }
+        
+        # Parse cafe name from key (remove extension)
+        cafe_name = key.replace('.jpg', '').replace('.jpeg', '').replace('.png', '').replace('.gif', '')
+        
+        # Extract metadata
+        # S3 stores metadata with x-amz-meta- prefix, but when you set it with x-amz-meta- prefix,
+        # it might be stored as x-amz-meta-x-amz-meta-... so check both variations
+        neighborhood = metadata.get('x-amz-meta-x-amz-meta-neighborhood', '') or metadata.get('x-amz-meta-neighborhood', '') or metadata.get('neighborhood', '')
+        subway_lines = metadata.get('x-amz-meta-x-amz-meta-closest_subway_lines', '') or metadata.get('x-amz-meta-closest_subway_lines', '') or metadata.get('closest_subway_lines', '')
+        latitude = metadata.get('x-amz-meta-x-amz-meta-latitude', '') or metadata.get('x-amz-meta-latitude', '') or metadata.get('latitude', '')
+        longitude = metadata.get('x-amz-meta-x-amz-meta-longitude', '') or metadata.get('x-amz-meta-longitude', '') or metadata.get('longitude', '')
+        elo_star_rating = metadata.get('x-amz-meta-x-amz-meta-elo_star_rating', '') or metadata.get('x-amz-meta-elo_star_rating', '') or metadata.get('elo_star_rating', '')
+        notes = metadata.get('x-amz-meta-x-amz-meta-notes', '') or metadata.get('x-amz-meta-notes', '') or metadata.get('notes', '')
+        
+        # Parse subway routes
+        subway_routes = []
+        if subway_lines:
+            subway_routes = [r.strip().lower() for r in subway_lines.split(',') if r.strip()]
+        
+        # Generate map thumbnail only (gallery uses the 800px uploaded image)
+        map_thumbnail_url = None
+        try:
+            # Download the uploaded image (already resized to 800px on client)
+            image_obj = s3.get_object(Bucket=BUCKET, Key=key)
+            image_data = image_obj['Body'].read()
+            
+            # Open image
+            img = Image.open(BytesIO(image_data))
+            
+            # Apply EXIF orientation - primarily handle orientation 6 (90° CCW, most common)
+            # Use exif_transpose first (handles all cases), with fallback for orientation 6
+            try:
+                # Try exif_transpose first (handles all EXIF orientations correctly)
+                img = ImageOps.exif_transpose(img)
+            except Exception:
+                # If exif_transpose fails, manually check for orientation 6 (90° CCW)
+                try:
+                    exif = img.getexif()
+                    if exif is not None:
+                        orientation = exif.get(274)  # EXIF tag 274 is Orientation
+                        if orientation == 6:
+                            # Rotate 90° counter-clockwise (most common for phone photos)
+                            img = img.rotate(-90, expand=True)
+                except Exception:
+                    # If EXIF reading fails, continue with image as-is
+                    pass
+            
+            # Convert to RGB if necessary (handles PNG with transparency, etc.)
+            if img.mode in ('RGBA', 'LA', 'P'):
+                background = Image.new('RGB', img.size, (255, 255, 255))
+                if img.mode == 'P':
+                    img = img.convert('RGBA')
+                background.paste(img, mask=img.split()[-1] if img.mode in ('RGBA', 'LA') else None)
+                img = background
+            elif img.mode != 'RGB':
+                img = img.convert('RGB')
+            
+            # Generate map thumbnail (150px max width for 70px display)
+            max_width_map = 150
+            if img.width > max_width_map:
+                ratio = max_width_map / img.width
+                new_height = int(img.height * ratio)
+                img = img.resize((max_width_map, new_height), Image.Resampling.LANCZOS)
+            
+            map_thumbnail_buffer = BytesIO()
+            img.save(map_thumbnail_buffer, format='JPEG', quality=75, optimize=True)  # Lower quality for smaller file
+            map_thumbnail_buffer.seek(0)
+            
+            # Store map thumbnail in mapThumbnails/ folder
+            map_thumbnail_key = f"mapThumbnails/{key}"
+            s3.put_object(
+                Bucket=BUCKET,
+                Key=map_thumbnail_key,
+                Body=map_thumbnail_buffer.getvalue(),
+                ContentType='image/jpeg',
+                CacheControl='max-age=31536000'  # Cache for 1 year
+            )
+            map_thumbnail_url = f"https://{BUCKET}.s3.us-east-1.amazonaws.com/{map_thumbnail_key}"
+            print(f"Generated map thumbnail: {map_thumbnail_key}")
+        except Exception as e:
+            print(f"Error generating map thumbnail: {e}")
+            # Continue without map thumbnail - use full image URL as fallback
+            map_thumbnail_url = f"https://{BUCKET}.s3.us-east-1.amazonaws.com/{key}"
+        
+        # Build cafe data
+        # The uploaded image (800px) is used as the "full" image for gallery
+        # Only generate map thumbnail (150px) for map popups
+        image_url = f"https://{BUCKET}.s3.us-east-1.amazonaws.com/{key}"
+        cafe_data = {
+            'key': key,
+            'name': cafe_name,
+            'imageUrl': image_url,  # 800px image uploaded from client
+            'thumbnailUrl': image_url,  # Same as imageUrl since it's already optimized
+            'mapThumbnailUrl': map_thumbnail_url or image_url,  # Fallback to full image if map thumbnail failed
+            'lastModified': last_modified,
+            'neighborhood': neighborhood if neighborhood else None,
+            'subwayRoutes': subway_routes if subway_routes else None,
+            'latitude': float(latitude) if latitude else None,
+            'longitude': float(longitude) if longitude else None,
+            'eloStarRating': float(elo_star_rating) if elo_star_rating else None,
+            'notes': notes if notes else None
+        }
+        
+        # Update cafes.json
+        success = update_cafes_json(cafe_data)
+        
+        if success:
+            return {
+                "statusCode": 200,
+                "headers": CORS_HEADERS,
+                "body": json.dumps({"message": "Cafes.json updated successfully"})
+            }
+        else:
+            return {
+                "statusCode": 500,
+                "headers": CORS_HEADERS,
+                "body": json.dumps({"error": "Failed to update cafes.json"})
+            }
+            
+    except Exception as e:
+        return {
+            "statusCode": 500,
+            "headers": CORS_HEADERS,
+            "body": json.dumps({"error": str(e)})
+        }
+
 def lambda_handler(event, context):
     # Handle preflight OPTIONS request
     method = event.get("requestContext", {}).get("http", {}).get("method", "")
@@ -169,11 +392,24 @@ def lambda_handler(event, context):
             "body": ""
         }
 
+    # Check if this is a request to update cafes.json (after upload)
+    # Check both path and routeKey for API Gateway v2
+    path = event.get("requestContext", {}).get("http", {}).get("path", "") or event.get("rawPath", "")
+    route_key = event.get("requestContext", {}).get("routeKey", "")
+    
+    # Parse body to check for action
     try:
         body = json.loads(event.get("body", "{}"))
+    except Exception as e:
+        print(f"Error parsing body: {e}")
+        body = {}
+    
+    if "/update-cafes" in path or "update-cafes" in route_key or body.get("action") == "update-cafes":
+        return handle_update_cafes(event, context)
+
+    try:
         content_type = body.get("contentType", "image/jpeg")
         cafe_name = body.get("cafeName", "").strip()
-        rating = body.get("rating")
         notes = body.get("notes", "").strip()
         latitude = body.get("latitude")
         longitude = body.get("longitude")
@@ -182,6 +418,7 @@ def lambda_handler(event, context):
         neighborhood = ""
         closest_subway_station = ""
         closest_subway_lines = ""
+        closest_subway_distance = ""
         
         if latitude is not None and longitude is not None:
             try:
@@ -199,6 +436,9 @@ def lambda_handler(event, context):
                         lines = subway_data.get('lines', [])
                         if lines:
                             closest_subway_lines = ','.join(lines)
+                        distance_m = subway_data.get('distance_m')
+                        if distance_m is not None:
+                            closest_subway_distance = str(distance_m)
             except Exception as e:
                 # Log error but don't fail the request
                 print(f"Error computing metadata: {e}")
@@ -221,20 +461,8 @@ def lambda_handler(event, context):
         # Sanitize cafe name
         safe_cafe_name = cafe_name.replace("/", "_").replace("\\", "_")
 
-        # Generate filename
-        rating_value = None
-        if rating is not None and rating != "":
-            try:
-                rating_value = float(rating)
-                if rating_value > 0:
-                    rating_str = str(int(rating_value)) if rating_value == int(rating_value) else str(rating_value)
-                    key = f"{safe_cafe_name}.jpg"
-                else:
-                    key = f"{safe_cafe_name}_unvisited.jpg"
-            except (ValueError, TypeError):
-                key = f"{safe_cafe_name}_unvisited.jpg"
-        else:
-            key = f"{safe_cafe_name}_unvisited.jpg"
+        # Generate filename (all cafes are visited, no need for _unvisited suffix)
+        key = f"{safe_cafe_name}.jpg"
 
         # Get comparison results from request body if provided
         comparisons = body.get("comparisons")  # List of [cafe_key, score] tuples
@@ -269,14 +497,15 @@ def lambda_handler(event, context):
                 "Metadata": {
                     "cafe-name": cafe_name,
                     "notes": notes or "",
-                    "rating": str(rating_value) if rating_value else "",
                     "latitude": str(latitude) if latitude is not None else "",
                     "longitude": str(longitude) if longitude is not None else "",
                     "x-amz-meta-neighborhood": neighborhood or "",
                     "closest_subway_station": closest_subway_station or "",
+                    "closest_subway_station_distance_m": closest_subway_distance or "",
                     "closest_subway_lines": closest_subway_lines or "",
                     "elo_rating": str(initial_elo),
-                    "elo_star_rating": str(elo_star_rating)
+                    "elo_star_rating": str(elo_star_rating),
+                    "x-amz-meta-notes": notes or ""
                 }
             },
             ExpiresIn=60

@@ -12,6 +12,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -221,6 +223,7 @@
             position: relative;
             width: 100%;
             height: 250px;
+            contain: layout style paint;
         }
 
         /* .cafe-image {
@@ -247,12 +250,50 @@
             height: 100%;
             background: rgba(0, 0, 0, 0.7);
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             opacity: 0;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.15s ease;
             color: gold;
             font-size: 2rem;
+            gap: 0.5rem;
+            padding: 1rem;
+            will-change: opacity;
+            backface-visibility: hidden;
+            transform: translateZ(0);
+        }
+
+        .cups-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            contain: layout style paint;
+        }
+
+        .cup-icon {
+            width: 2rem;
+            height: 2rem;
+            display: inline-block;
+            flex-shrink: 0;
+            position: relative;
+            will-change: transform;
+        }
+
+        .cup-icon svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .cup-icon.half {
+            overflow: hidden;
+        }
+
+        .cup-icon.half svg {
+            clip-path: inset(50% 0 0 0);
         }
 
         @media (hover: hover) and (pointer: fine) {
@@ -278,6 +319,19 @@
 
         .cafe-name.cafe-name-small {
             font-size: 1.1rem;
+        }
+
+        .cafe-notes {
+            font-family: 'Dancing Script', 'Brush Script MT', cursive;
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.9);
+            text-align: center;
+            padding: 0.5rem 1rem 0 1rem;
+            font-style: italic;
+            line-height: 1.4;
+            max-width: 100%;
+            word-wrap: break-word;
+            will-change: contents;
         }
 
         .cafe-neighborhood {
@@ -418,10 +472,11 @@
 
     <!-- SVG Sprite for subway icons will be loaded here -->
 
-    <!-- Load SVG sprite for subway icons -->
+    <!-- Load SVG sprite for subway icons and coffee cup -->
     <script>
-        // Load and inject the sprite sheet
+        // Load and inject the sprite sheets
         (function () {
+            // Load subway icons sprite
             fetch('all_icons.svg')
                 .then(response => {
                     if (!response.ok) {
@@ -440,17 +495,64 @@
                 .catch(err => {
                     console.warn('Could not load icons.svg sprite. Make sure to run: npm run build-icons', err);
                 });
+
+            // Load coffee cup SVG and add to sprite
+            fetch('coffeecup2.svg')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to load coffeecup2.svg');
+                    }
+                    return response.text();
+                })
+                .then(svgContent => {
+                    // Extract the SVG content and add an ID to it
+                    const parser = new DOMParser();
+                    const svgDoc = parser.parseFromString(svgContent, 'image/svg+xml');
+                    const svgElement = svgDoc.querySelector('svg');
+
+                    if (svgElement) {
+                        // Get or set viewBox for proper scaling
+                        let viewBox = svgElement.getAttribute('viewBox');
+                        if (!viewBox) {
+                            const width = svgElement.getAttribute('width') || '1024';
+                            const height = svgElement.getAttribute('height') || '1024';
+                            viewBox = `0 0 ${width} ${height}`;
+                            svgElement.setAttribute('viewBox', viewBox);
+                        }
+
+                        // Set an ID for the sprite reference
+                        svgElement.id = 'coffeecup-icon';
+                        // Remove any existing width/height to make it scalable
+                        svgElement.removeAttribute('width');
+                        svgElement.removeAttribute('height');
+
+                        // Add to sprite container or create one if it doesn't exist
+                        let container = document.getElementById('svg-sprite-container');
+                        if (!container) {
+                            container = document.createElement('div');
+                            container.id = 'svg-sprite-container';
+                            container.style.display = 'none';
+                            document.body.insertBefore(container, document.body.firstChild);
+                        }
+                        container.appendChild(svgElement);
+                    }
+                })
+                .catch(err => {
+                    console.error('Error loading coffee cup SVG:', err);
+                });
         })();
     </script>
 
     <script>
         const BUCKET_URL = 'https://azamcafelistphotos.s3.us-east-1.amazonaws.com';
+        const CAFES_JSON_URL = `${BUCKET_URL}/cafes.json`;
         const CACHE_KEY = 'cafeGalleryData';
         const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes cache
-        const MAX_CONCURRENT_REQUESTS = 10; // Limit concurrent HEAD requests
         let currentSort = 'rating'; // Default sort by ELO rating
         let currentNeighborhoodFilter = 'all';
-        let cachedCafes = null; // Cache cafes in memory so sort/filter don't refetch S3
+        let cachedCafes = null; // Cache cafes in memory so sort/filter don't refetch
+        let cachedSortedCafes = null; // Cache sorted cafes to avoid re-sorting
+        let cachedFilteredCafes = null; // Cache filtered cafes
 
         // Cache management functions
         function getCachedData() {
@@ -487,31 +589,6 @@
             }
         }
 
-        // Throttle function to limit concurrent requests
-        async function throttleRequests(items, fn, maxConcurrent = MAX_CONCURRENT_REQUESTS) {
-            const results = [];
-            let index = 0;
-
-            async function worker() {
-                while (index < items.length) {
-                    const currentIndex = index++;
-                    results[currentIndex] = fn(items[currentIndex]);
-                }
-            }
-
-            // Start worker threads up to maxConcurrent
-            const workers = [];
-            const numWorkers = Math.min(maxConcurrent, items.length);
-            for (let i = 0; i < numWorkers; i++) {
-                workers.push(worker());
-            }
-
-            // Wait for all workers to complete
-            await Promise.all(workers);
-
-            // Wait for all promises to resolve
-            return Promise.all(results);
-        }
 
         // Function to parse cafe info from filename
         function parseCafeInfo(filename) {
@@ -526,9 +603,28 @@
             };
         }
 
-        // Function to generate star rating HTML
+        // Function to generate star rating HTML using SVG sprite (supports half cups for .5 ratings)
         function generateStars(count) {
-            return '☕️'.repeat(count);
+            if (count === null || count === undefined || count === 0) {
+                return '';
+            }
+
+            const fullCups = Math.floor(count);
+            const hasHalf = count % 1 >= 0.5;
+
+            let result = '';
+
+            // Generate full cups using SVG sprite
+            for (let i = 0; i < fullCups; i++) {
+                result += '<span class="cup-icon"><svg width="100%" height="100%" viewBox="0 0 1024 1024"><use href="#coffeecup-icon" xlink:href="#coffeecup-icon"></use></svg></span>';
+            }
+
+            // Generate half cup if needed
+            if (hasHalf) {
+                result += '<span class="cup-icon half"><svg width="100%" height="100%" viewBox="0 0 1024 1024"><use href="#coffeecup-icon" xlink:href="#coffeecup-icon"></use></svg></span>';
+            }
+
+            return result;
         }
 
         // Function to sort cafes by name
@@ -537,14 +633,18 @@
             return [...cafes].sort((a, b) => a.name.localeCompare(b.name));
         }
 
-        // Function to sort cafes by ELO rating (highest first)
+        // Function to sort cafes by ELO star rating (highest first)
         function sortByEloRating(cafes) {
             // Create a copy to avoid mutating the original array
             return [...cafes].sort((a, b) => {
-                const ratingA = a.eloRating !== null && a.eloRating !== undefined ? parseFloat(a.eloRating) : -Infinity;
-                const ratingB = b.eloRating !== null && b.eloRating !== undefined ? parseFloat(b.eloRating) : -Infinity;
+                const ratingA = a.eloStarRating !== null && a.eloStarRating !== undefined
+                    ? parseFloat(a.eloStarRating)
+                    : -Infinity;
+                const ratingB = b.eloStarRating !== null && b.eloStarRating !== undefined
+                    ? parseFloat(b.eloStarRating)
+                    : -Infinity;
 
-                // Primary sort: by ELO rating (descending)
+                // Primary sort: by ELO star rating (descending)
                 if (ratingA !== ratingB) {
                     return ratingB - ratingA;
                 }
@@ -554,45 +654,6 @@
             });
         }
 
-        // Combined function to fetch neighborhood, subway routes, and rating from S3 metadata in one request
-        async function getMetadataFromS3(key) {
-            try {
-                const response = await fetch(`${BUCKET_URL}/${key}`, {
-                    method: 'HEAD',
-                    mode: 'cors'
-                });
-
-                if (response.ok) {
-                    // S3 stores metadata with double prefix: x-amz-meta-x-amz-meta-...
-                    const neighborhood = response.headers.get('x-amz-meta-x-amz-meta-neighborhood') ||
-                        response.headers.get('x-amz-meta-neighborhood') || null;
-
-                    const routes = response.headers.get('x-amz-meta-x-amz-meta-closest_subway_lines') ||
-                        response.headers.get('x-amz-meta-closest_subway_lines');
-
-                    const subwayRoutes = routes
-                        ? routes.split(',').map(r => r.trim().toLowerCase()).filter(r => r)
-                        : null;
-
-                    const ratingStr = response.headers.get('x-amz-meta-x-amz-meta-rating') ||
-                        response.headers.get('x-amz-meta-rating');
-                    const rating = ratingStr ? parseInt(ratingStr, 10) : null;
-
-                    // Try multiple header name variations for elo_rating
-                    const eloRatingStr = response.headers.get('x-amz-meta-x-amz-meta-elo_rating') ||
-                        response.headers.get('x-amz-meta-elo_rating') ||
-                        response.headers.get('x-amz-meta-x-amz-meta-elo-rating') ||
-                        response.headers.get('x-amz-meta-elo-rating');
-                    const eloRating = eloRatingStr ? parseFloat(eloRatingStr) : null;
-
-
-                    return { neighborhood, subwayRoutes, rating, eloRating };
-                }
-            } catch (error) {
-                // Silently fail - metadata will just not be displayed
-            }
-            return { neighborhood: null, subwayRoutes: null, rating: null, eloRating: null };
-        }
 
         // Function to generate subway icon HTML using sprite
         function generateSubwayIcons(routes) {
@@ -621,14 +682,14 @@
             const gallery = document.getElementById('gallery');
 
             try {
-                // Load and cache cafes from S3 only once per page load
+                // Load and cache cafes from cafes.json only once per page load
                 if (!cachedCafes) {
                     // Try to load from localStorage cache first
                     const cachedData = getCachedData();
-                    // Check if cache has eloRating property AND at least one cafe has a non-null eloRating
+                    // Check if cache has eloStarRating property AND at least one cafe has a non-null eloStarRating
                     const hasValidEloRating = cachedData && cachedData.length > 0 &&
-                        cachedData[0].hasOwnProperty('eloRating') &&
-                        cachedData.some(cafe => cafe.eloRating !== null && cafe.eloRating !== undefined);
+                        cachedData[0].hasOwnProperty('eloStarRating') &&
+                        cachedData.some(cafe => cafe.eloStarRating !== null && cafe.eloStarRating !== undefined);
 
                     if (hasValidEloRating) {
                         cachedCafes = cachedData;
@@ -638,58 +699,49 @@
                         if (cachedData) {
                             localStorage.removeItem(CACHE_KEY);
                         }
-                        // Fetch the bucket listing XML
-                        const response = await fetch(`${BUCKET_URL}?list-type=2`);
-                        const data = await response.text();
-                        const parser = new DOMParser();
-                        const xmlDoc = parser.parseFromString(data, "text/xml");
-                        const contents = xmlDoc.getElementsByTagName("Contents");
 
-                        // First pass: extract basic info from XML
-                        const imageKeys = Array.from(contents)
-                            .map(item => {
-                                const key = item.getElementsByTagName("Key")[0].textContent;
-                                if (!key.match(/\.(jpg|jpeg|png|gif)$/i)) return null;
-                                return {
-                                    key,
-                                    lastModified: item.getElementsByTagName("LastModified")[0].textContent
-                                };
-                            })
-                            .filter(item => item !== null);
+                        // Fetch cafes.json from S3
+                        const response = await fetch(CAFES_JSON_URL);
+                        if (!response.ok) {
+                            throw new Error(`Failed to fetch cafes.json: ${response.status}`);
+                        }
 
-                        // Create base cafe objects
-                        const baseCafes = imageKeys.map(({ key, lastModified }) => {
-                            const cafeInfo = parseCafeInfo(key);
+                        const jsonData = await response.json();
+                        const cafesFromJson = jsonData.cafes || [];
+
+                        // Transform JSON data to match expected format
+                        // Note: cafes.json is pre-sorted by rating, so we can use it directly for default sort
+                        cachedCafes = cafesFromJson.map(cafe => {
+                            // Parse cafe name from key if name is not set
+                            const name = cafe.name || parseCafeInfo(cafe.key).name;
+                            const imageUrl = cafe.imageUrl || `${BUCKET_URL}/${cafe.key}`;
+
                             return {
-                                ...cafeInfo,
-                                imageUrl: `${BUCKET_URL}/${key}`,
-                                lastModified,
-                                key,
-                                neighborhood: null,
-                                subwayRoutes: null
+                                key: cafe.key,
+                                name: name,
+                                imageUrl: imageUrl,
+                                thumbnailUrl: cafe.thumbnailUrl || imageUrl, // Fallback to full image if no thumbnail
+                                lastModified: cafe.lastModified || '',
+                                neighborhood: cafe.neighborhood || null,
+                                subwayRoutes: cafe.subwayRoutes || null,
+                                subwayStation: cafe.subwayStation || null,
+                                subwayDistanceM: cafe.subwayDistanceM || null,
+                                latitude: cafe.latitude || null,
+                                longitude: cafe.longitude || null,
+                                eloRating: cafe.eloRating || null,
+                                eloStarRating: cafe.eloStarRating || null,
+                                stars: cafe.eloStarRating || 0,
+                                notes: cafe.notes || null,
+                                visited: true
                             };
                         });
 
-                        // Fetch metadata with throttling (limited concurrent requests)
-                        cachedCafes = await throttleRequests(
-                            baseCafes,
-                            async (cafe) => {
-                                const metadata = await getMetadataFromS3(cafe.key);
-                                // Update stars from metadata rating if available (only for visited cafes)
-                                const stars = metadata.rating !== null ? metadata.rating : cafe.stars;
-                                return {
-                                    ...cafe,
-                                    neighborhood: metadata.neighborhood,
-                                    subwayRoutes: metadata.subwayRoutes,
-                                    stars: stars,
-                                    eloRating: metadata.eloRating
-                                };
-                            },
-                            MAX_CONCURRENT_REQUESTS
-                        );
-
                         // Cache the results
                         setCachedData(cachedCafes);
+
+                        // Clear sort/filter caches when data is refreshed
+                        cachedSortedCafes = null;
+                        cachedFilteredCafes = null;
                     }
                 }
 
@@ -723,13 +775,27 @@
                     }
                 }
 
-                // Apply neighborhood filter
-                const filteredCafes = currentNeighborhoodFilter === 'all'
-                    ? cafes
-                    : cafes.filter(cafe => cafe.neighborhood === currentNeighborhoodFilter);
+                // Apply neighborhood filter (with caching)
+                let filteredCafes;
+                const filterKey = currentNeighborhoodFilter;
+                if (cachedFilteredCafes && cachedFilteredCafes.filterKey === filterKey) {
+                    filteredCafes = cachedFilteredCafes.cafes;
+                } else {
+                    filteredCafes = currentNeighborhoodFilter === 'all'
+                        ? cafes
+                        : cafes.filter(cafe => cafe.neighborhood === currentNeighborhoodFilter);
+                    cachedFilteredCafes = { filterKey, cafes: filteredCafes };
+                }
 
-                // Sort cafes based on current sort mode
-                const sortedCafes = currentSort === 'name' ? sortByName(filteredCafes) : sortByEloRating(filteredCafes);
+                // Sort cafes based on current sort mode (with caching)
+                let sortedCafes;
+                const sortKey = `${currentSort}-${filterKey}`;
+                if (cachedSortedCafes && cachedSortedCafes.sortKey === sortKey) {
+                    sortedCafes = cachedSortedCafes.cafes;
+                } else {
+                    sortedCafes = currentSort === 'name' ? sortByName(filteredCafes) : sortByEloRating(filteredCafes);
+                    cachedSortedCafes = { sortKey, cafes: sortedCafes };
+                }
 
                 // Render sorted cafes incrementally to avoid blocking UI
                 await renderCafesIncrementally(sortedCafes, gallery);
@@ -741,7 +807,7 @@
 
         // Render cafes incrementally using requestAnimationFrame to avoid blocking
         async function renderCafesIncrementally(cafes, gallery) {
-            const BATCH_SIZE = 10; // Render 10 cards per frame
+            const BATCH_SIZE = 15; // Render 15 cards per frame (increased from 10 for better performance)
             let index = 0;
 
             function renderBatch() {
@@ -769,9 +835,16 @@
             const card = document.createElement('div');
             card.className = 'cafe-card visited';
 
+            const notesHtml = cafe.notes
+                ? `<div class="cafe-notes">${cafe.notes}</div>`
+                : '';
+
             const starsHtml = `
                 <div class="stars-overlay">
-                    ${generateStars(cafe.stars)}
+                    <div class="cups-container">
+                        ${generateStars(cafe.stars)}
+                    </div>
+                    ${notesHtml}
                 </div>
             `;
 
@@ -781,9 +854,11 @@
 
             const subwayIconsHtml = generateSubwayIcons(cafe.subwayRoutes);
 
+            // Use thumbnail for faster loading, fallback to full image
+            const imageSrc = cafe.thumbnailUrl || cafe.imageUrl;
             card.innerHTML = `
                 <div class="cafe-image-container">
-                    <img class="cafe-image" src="${cafe.imageUrl}" alt="${cafe.name}" loading="lazy">
+                    <img class="cafe-image" src="${imageSrc}" alt="${cafe.name}" loading="lazy">
                     ${starsHtml}
                     ${subwayIconsHtml}
                 </div>

@@ -561,11 +561,6 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="rating">Rating (1-5)</label>
-                    <input type="number" min="1" max="5" step="0.5" id="rating" placeholder="4.5" />
-                </div>
-
-                <div class="form-group">
                     <label for="notes">Notes</label>
                     <textarea id="notes" placeholder="Add any notes about this café..."></textarea>
                 </div>
@@ -674,27 +669,43 @@
 
         // --- 3. Convert image to JPG with resizing for performance ---
         function convertToJPG(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = function (e) {
+            return new Promise(async (resolve, reject) => {
+                try {
+                    // Read file as ArrayBuffer to get EXIF data
+                    const arrayBuffer = await new Promise((res, rej) => {
+                        const reader = new FileReader();
+                        reader.onload = () => res(reader.result);
+                        reader.onerror = rej;
+                        reader.readAsArrayBuffer(file);
+                    });
+
+                    // Get EXIF orientation (only checking for 90° CCW rotation - orientation 6)
+                    const exifData = await exifr.parse(arrayBuffer, { orientation: true });
+                    const orientation = exifData?.Orientation || 1;
+                    const needsRotation = orientation === 6; // 90° counter-clockwise
+
+                    // Create image from array buffer
+                    const blob = new Blob([arrayBuffer], { type: file.type });
+                    const url = URL.createObjectURL(blob);
+
                     const img = new Image();
                     img.onload = function () {
-                        // Set max dimensions to optimize file size and processing speed
-                        const MAX_WIDTH = 2000;
-                        const MAX_HEIGHT = 2000;
+                        // Resize to max 800px width for good quality in gallery (250px display height)
+                        const MAX_WIDTH = 800;
 
                         let width = img.width;
                         let height = img.height;
 
-                        // Resize if image is larger than max dimensions
-                        if (width > MAX_WIDTH || height > MAX_HEIGHT) {
-                            if (width > height) {
-                                height = (height * MAX_WIDTH) / width;
-                                width = MAX_WIDTH;
-                            } else {
-                                width = (width * MAX_HEIGHT) / height;
-                                height = MAX_HEIGHT;
-                            }
+                        // If rotated 90° CCW, swap dimensions for canvas
+                        if (needsRotation) {
+                            [width, height] = [height, width];
+                        }
+
+                        // Resize if larger than max width, maintaining aspect ratio
+                        if (width > MAX_WIDTH) {
+                            const ratio = MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                            height = height * ratio;
                         }
 
                         const canvas = document.createElement('canvas');
@@ -705,9 +716,23 @@
                         // Use faster rendering settings
                         ctx.imageSmoothingEnabled = true;
                         ctx.imageSmoothingQuality = 'high';
-                        ctx.drawImage(img, 0, 0, width, height);
 
-                        // Use lower quality for faster processing and smaller files
+                        // Apply rotation if needed (90° counter-clockwise)
+                        if (needsRotation) {
+                            ctx.save();
+                            ctx.translate(width / 2, height / 2);
+                            ctx.rotate(-Math.PI / 2); // 90° counter-clockwise
+                            ctx.drawImage(img, -img.width / 2, -img.height / 2, img.width, img.height);
+                            ctx.restore();
+                        } else {
+                            // Normal orientation - just draw the image
+                            ctx.drawImage(img, 0, 0, width, height);
+                        }
+
+                        // Clean up object URL
+                        URL.revokeObjectURL(url);
+
+                        // Use 85% quality for good balance
                         canvas.toBlob(function (blob) {
                             if (blob) {
                                 // Create a new File object with .jpg extension
@@ -719,13 +744,16 @@
                             } else {
                                 reject(new Error('Failed to convert image to JPG'));
                             }
-                        }, 'image/jpeg', 0.85); // 0.85 quality for faster processing
+                        }, 'image/jpeg', 0.85);
                     };
-                    img.onerror = () => reject(new Error('Failed to load image'));
-                    img.src = e.target.result;
-                };
-                reader.onerror = () => reject(new Error('Failed to read file'));
-                reader.readAsDataURL(file);
+                    img.onerror = () => {
+                        URL.revokeObjectURL(url);
+                        reject(new Error('Failed to load image'));
+                    };
+                    img.src = url;
+                } catch (error) {
+                    reject(new Error('Failed to process image: ' + error.message));
+                }
             });
         }
 
@@ -775,61 +803,56 @@
         // --- 5. Fetch random cafes for comparison ---
         async function fetchRandomCafes(numCafes = 5) {
             try {
-                // Fetch the bucket listing XML
-                const response = await fetch(`${BUCKET_URL}?list-type=2`);
-                const data = await response.text();
-                const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(data, "text/xml");
-                const contents = xmlDoc.getElementsByTagName("Contents");
+                // Fetch cafes.json from S3
+                const CAFES_JSON_URL = `${BUCKET_URL}/cafes.json`;
+                const response = await fetch(CAFES_JSON_URL);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch cafes.json: ${response.status}`);
+                }
+                const jsonData = await response.json();
+                const cafesFromJson = jsonData.cafes || [];
 
-                // Extract image keys
-                const imageKeys = Array.from(contents)
-                    .map(item => {
-                        const key = item.getElementsByTagName("Key")[0].textContent;
-                        if (!key.match(/\.(jpg|jpeg|png|gif)$/i)) return null;
-                        return key;
-                    })
-                    .filter(key => key !== null);
+                // Filter out map thumbnails and ensure we have valid cafe keys
+                const validCafes = cafesFromJson.filter(cafe => {
+                    const key = cafe.key || '';
+                    // Exclude map thumbnails folder and ensure it's a valid image key
+                    return !key.startsWith('mapThumbnails/') &&
+                        key.toLowerCase().match(/\.(jpg|jpeg|png|gif)$/i);
+                });
 
-                if (imageKeys.length === 0) {
+                if (validCafes.length === 0) {
                     return [];
                 }
 
                 // Select random cafes
-                const numToSelect = Math.min(numCafes, imageKeys.length);
-                const selectedKeys = [];
-                const shuffled = [...imageKeys].sort(() => 0.5 - Math.random());
-                selectedKeys.push(...shuffled.slice(0, numToSelect));
+                const numToSelect = Math.min(numCafes, validCafes.length);
+                const shuffled = [...validCafes].sort(() => 0.5 - Math.random());
+                const selectedCafes = shuffled.slice(0, numToSelect);
 
-                // Fetch metadata for selected cafes
-                const cafes = [];
-                for (const key of selectedKeys) {
-                    try {
-                        const metadataResponse = await fetch(`${BUCKET_URL}/${key}`, {
-                            method: 'HEAD',
-                            mode: 'cors'
-                        });
-
-                        if (metadataResponse.ok) {
-                            const cafeName = metadataResponse.headers.get('x-amz-meta-x-amz-meta-cafe-name') ||
-                                metadataResponse.headers.get('x-amz-meta-cafe-name') || '';
-                            const neighborhood = metadataResponse.headers.get('x-amz-meta-x-amz-meta-neighborhood') ||
-                                metadataResponse.headers.get('x-amz-meta-neighborhood') || '';
-
-                            cafes.push({
-                                key: key,
-                                imageUrl: `${BUCKET_URL}/${key}`,
-                                name: cafeName || key.replace(/\.(jpg|jpeg|png|gif)$/i, '').replace(/_/g, ' '),
-                                neighborhood: neighborhood || null
-                            });
-                        }
-                    } catch (err) {
-                        // Skip cafes with metadata errors
+                // Map to comparison format (no images needed, just name and neighborhood)
+                const cafes = selectedCafes.map(cafe => {
+                    // Parse name from key if not set, removing path and extension
+                    let name = cafe.name;
+                    if (!name && cafe.key) {
+                        // Remove path (e.g., "mapThumbnails/") and extension
+                        name = cafe.key.split('/').pop().replace(/\.(jpg|jpeg|png|gif)$/i, '').replace(/_/g, ' ');
                     }
-                }
+
+                    // Clean up name - remove any "mapThumbnail" or "mapThumbnails" prefixes that might have been incorrectly stored
+                    if (name) {
+                        name = name.replace(/^mapThumbnails?\//i, '').replace(/^mapThumbnail/i, '').trim();
+                    }
+
+                    return {
+                        key: cafe.key,
+                        name: name || 'Unknown Cafe',
+                        neighborhood: cafe.neighborhood || null
+                    };
+                });
 
                 return cafes;
             } catch (error) {
+                console.error('Error fetching cafes for comparison:', error);
                 return [];
             }
         }
@@ -940,7 +963,6 @@
                 const jpgFile = storedJpgFile;
                 const originalFile = storedOriginalFile || document.getElementById("photo").files[0];
                 const cafeName = storedFormData?.cafeName || document.getElementById("cafe").value.trim();
-                const rating = storedFormData?.rating || document.getElementById("rating").value;
                 const notes = storedFormData?.notes || document.getElementById("notes").value.trim();
                 const password = storedFormData?.password || document.getElementById("upload-password").value;
 
@@ -948,30 +970,35 @@
                     throw new Error("Converted image not found. Please try uploading again.");
                 }
 
-                // --- 1. Get token if not already, or refresh if expired ---
-                if (!token) {
-                    token = await getToken(password);
-                } else {
-                    // Token might have expired during comparisons (tokens are valid for 5 minutes)
-                    // Try to refresh it if we have the password
-                    try {
-                        // Simple check: if token exists but might be old, refresh it
-                        // Since tokens expire in 5 minutes and comparisons might take longer, refresh proactively
-                        token = await getToken(password);
-                    } catch (err) {
-                        // If refresh fails, try to continue with existing token
-                    }
-                }
-
-                // --- 2. Extract GPS from original file ---
-                const gpsData = originalFile ? await getGPSFromFile(originalFile) : null;
+                // --- 1 & 2. Get token and extract GPS in parallel (both are independent) ---
+                const [tokenResult, gpsData] = await Promise.all([
+                    // Get token if not already, or refresh if expired
+                    (async () => {
+                        if (!token) {
+                            return await getToken(password);
+                        } else {
+                            // Token might have expired during comparisons (tokens are valid for 5 minutes)
+                            // Try to refresh it if we have the password
+                            try {
+                                // Simple check: if token exists but might be old, refresh it
+                                // Since tokens expire in 5 minutes and comparisons might take longer, refresh proactively
+                                return await getToken(password);
+                            } catch (err) {
+                                // If refresh fails, try to continue with existing token
+                                return token;
+                            }
+                        }
+                    })(),
+                    // Extract GPS from original file
+                    originalFile ? getGPSFromFile(originalFile) : Promise.resolve(null)
+                ]);
+                token = tokenResult;
 
                 // --- 4. Get presigned URL with comparison results ---
                 // Use the file's actual content type (could be JPG, HEIC, etc.)
                 const uploadData = {
                     contentType: jpgFile.type || 'image/jpeg',
                     cafeName,
-                    rating: rating ? parseFloat(rating) : null,
                     notes,
                     latitude: gpsData ? gpsData.latitude : null,
                     longitude: gpsData ? gpsData.longitude : null,
@@ -987,6 +1014,7 @@
                 });
                 if (!uploadRes.ok) throw new Error("Failed to upload to S3");
 
+                // Show success immediately after upload completes
                 alert("Uploaded successfully!");
                 document.getElementById('cafe-form').reset();
                 document.getElementById('cafe-form').style.display = 'block';
@@ -994,6 +1022,23 @@
                 document.getElementById('comparison-section').classList.remove('active');
                 document.getElementById('comparison-content').innerHTML = '<div class="comparison-loading">Loading cafes for comparison...</div>';
                 comparisonResults = [];
+
+                // --- 6. Update cafes.json after successful upload (non-blocking) ---
+                // Do this asynchronously so user doesn't have to wait
+                fetch(PRESIGN_LAMBDA_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        action: "update-cafes",
+                        s3Key: s3Key
+                    })
+                }).catch(updateError => {
+                    // Silently handle errors - JSON update can happen later if needed
+                    console.error("Error updating cafes.json:", updateError);
+                });
                 currentComparisonIndex = 0;
                 comparisonCafes = [];
                 storedOriginalFile = null;
@@ -1027,7 +1072,6 @@
             // Store original file for GPS extraction
             storedOriginalFile = file;
 
-            const rating = document.getElementById("rating").value;
             const notes = document.getElementById("notes").value.trim();
 
             // Extract GPS to get neighborhood
@@ -1039,7 +1083,6 @@
 
             storedFormData = {
                 cafeName: cafeName,
-                rating: rating,
                 notes: notes,
                 password: password,
                 neighborhood: neighborhood

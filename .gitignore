@@ -7,3 +7,5 @@ __pycache__/
 *.ipynb
 update-s3-cors.sh
 nyc_subway.json
+function/build_cafes_json.py
+function/batch_resize_and_thumbnail.py
