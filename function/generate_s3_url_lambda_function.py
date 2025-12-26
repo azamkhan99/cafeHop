@@ -7,12 +7,12 @@ from PIL import Image, ImageOps
 
 # Import utils for computing neighborhood and subway station
 try:
-    from utils import get_neighborhood, get_closest_subway_station
+    from utils import get_neighborhood, get_closest_subway_station, build_google_maps_link_nearby
 except ImportError:
     # Fallback if utils not available
     get_neighborhood = None
     get_closest_subway_station = None
-
+    build_google_maps_link_nearby = None
 # Import elo ranking function
 try:
     from elo_ranking import log_new_cafe_elo, elo_to_cups
@@ -263,12 +263,14 @@ def handle_update_cafes(event, context):
         # Extract metadata
         # S3 stores metadata with x-amz-meta- prefix, but when you set it with x-amz-meta- prefix,
         # it might be stored as x-amz-meta-x-amz-meta-... so check both variations
-        neighborhood = metadata.get('x-amz-meta-x-amz-meta-neighborhood', '') or metadata.get('x-amz-meta-neighborhood', '') or metadata.get('neighborhood', '')
-        subway_lines = metadata.get('x-amz-meta-x-amz-meta-closest_subway_lines', '') or metadata.get('x-amz-meta-closest_subway_lines', '') or metadata.get('closest_subway_lines', '')
-        latitude = metadata.get('x-amz-meta-x-amz-meta-latitude', '') or metadata.get('x-amz-meta-latitude', '') or metadata.get('latitude', '')
-        longitude = metadata.get('x-amz-meta-x-amz-meta-longitude', '') or metadata.get('x-amz-meta-longitude', '') or metadata.get('longitude', '')
-        elo_star_rating = metadata.get('x-amz-meta-x-amz-meta-elo_star_rating', '') or metadata.get('x-amz-meta-elo_star_rating', '') or metadata.get('elo_star_rating', '')
-        notes = metadata.get('x-amz-meta-x-amz-meta-notes', '') or metadata.get('x-amz-meta-notes', '') or metadata.get('notes', '')
+        neighborhood = metadata.get('x-amz-meta-neighborhood', '') or metadata.get('neighborhood', '')
+        subway_lines = metadata.get('x-amz-meta-closest_subway_lines', '') or metadata.get('closest_subway_lines', '')
+        latitude = metadata.get('x-amz-meta-latitude', '') or metadata.get('latitude', '')
+        longitude = metadata.get('x-amz-meta-longitude', '') or metadata.get('longitude', '')
+        elo_star_rating = metadata.get('x-amz-meta-elo_star_rating', '') or metadata.get('elo_star_rating', '')
+        notes = metadata.get('x-amz-meta-notes', '') or metadata.get('notes', '')
+        google_maps_link = metadata.get('x-amz-meta-google_maps_link', '') or metadata.get('google_maps_link', '')
+        google_maps_place_type = metadata.get('x-amz-meta-google_maps_place_type', '') or metadata.get('google_maps_place_type', '')
         
         # Parse subway routes
         subway_routes = []
@@ -356,7 +358,9 @@ def handle_update_cafes(event, context):
             'latitude': float(latitude) if latitude else None,
             'longitude': float(longitude) if longitude else None,
             'eloStarRating': float(elo_star_rating) if elo_star_rating else None,
-            'notes': notes if notes else None
+            'notes': notes if notes else None,
+            'google_maps_link': google_maps_link if google_maps_link else None,
+            'google_maps_place_type': google_maps_place_type if google_maps_place_type else None
         }
         
         # Update cafes.json
@@ -413,13 +417,25 @@ def lambda_handler(event, context):
         notes = body.get("notes", "").strip()
         latitude = body.get("latitude")
         longitude = body.get("longitude")
+
+        if not cafe_name:
+            return {
+                "statusCode": 400,
+                "headers": CORS_HEADERS,
+                "body": json.dumps({"error": "Cafe name is required"})
+            }
+
+        # Sanitize cafe name
+        safe_cafe_name = cafe_name.replace("/", "_").replace("\\", "_")
         
         # Compute neighborhood and subway station from coordinates if available
         neighborhood = ""
         closest_subway_station = ""
         closest_subway_lines = ""
         closest_subway_distance = ""
-        
+        google_maps_link = ""
+        google_maps_place_type = ""
+
         if latitude is not None and longitude is not None:
             try:
                 # Compute neighborhood
@@ -439,6 +455,16 @@ def lambda_handler(event, context):
                         distance_m = subway_data.get('distance_m')
                         if distance_m is not None:
                             closest_subway_distance = str(distance_m)
+                
+                # Build google maps link
+                if not build_google_maps_link_nearby:
+                    print("build_google_maps_link_nearby is not configured")
+                if build_google_maps_link_nearby:
+                    maps_link, maps_place_type = build_google_maps_link_nearby(safe_cafe_name, float(latitude), float(longitude))
+                    if maps_link:
+                        google_maps_link = maps_link
+                    if maps_place_type:
+                        google_maps_place_type = maps_place_type
             except Exception as e:
                 # Log error but don't fail the request
                 print(f"Error computing metadata: {e}")
@@ -450,16 +476,12 @@ def lambda_handler(event, context):
             closest_subway_station = body.get("closestSubwayStation", "").strip()
         if body.get("closestSubwayLines", "").strip():
             closest_subway_lines = body.get("closestSubwayLines", "").strip()
+        if body.get("googleMapsLink", "").strip():
+            google_maps_link = body.get("googleMapsLink", "").strip()
+        if body.get("googleMapsPlaceType", "").strip():
+            google_maps_place_type = body.get("googleMapsPlaceType", "").strip()
 
-        if not cafe_name:
-            return {
-                "statusCode": 400,
-                "headers": CORS_HEADERS,
-                "body": json.dumps({"error": "Cafe name is required"})
-            }
-
-        # Sanitize cafe name
-        safe_cafe_name = cafe_name.replace("/", "_").replace("\\", "_")
+        
 
         # Generate filename (all cafes are visited, no need for _unvisited suffix)
         key = f"{safe_cafe_name}.jpg"
@@ -505,7 +527,9 @@ def lambda_handler(event, context):
                     "closest_subway_lines": closest_subway_lines or "",
                     "elo_rating": str(initial_elo),
                     "elo_star_rating": str(elo_star_rating),
-                    "x-amz-meta-notes": notes or ""
+                    "x-amz-meta-notes": notes or "",
+                    "google_maps_link": google_maps_link or "",
+                    "google_maps_place_type": google_maps_place_type or ""
                 }
             },
             ExpiresIn=60

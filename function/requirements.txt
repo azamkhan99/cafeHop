@@ -4,3 +4,4 @@ boto3
 Pillow
 geopy
 numpy
+googlemaps

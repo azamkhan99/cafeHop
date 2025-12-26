@@ -385,17 +385,6 @@
 
 
 
-        // Function to parse cafe info from filename
-        function parseCafeInfo(filename) {
-            const nameWithoutExt = filename.replace(/\.[^/.]+$/, "");
-
-            // All cafes are visited - rating will come from metadata
-            return {
-                name: nameWithoutExt,
-                visited: true,
-                stars: 0
-            };
-        }
 
         // Function to generate star rating HTML (supports half ratings with ½ symbol)
         function generateStars(count) {

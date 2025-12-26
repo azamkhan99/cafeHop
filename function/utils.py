@@ -4,6 +4,8 @@ import math
 import pickle
 import os
 import json
+import googlemaps
+gmaps_api_key = os.environ.get('GOOGLE_PLACES_API_KEY')
 nominatim_api_key = os.environ.get('NOMINATIM_API_KEY')
 geolocator = Nominatim(user_agent=nominatim_api_key)
 
@@ -305,3 +307,35 @@ def get_closest_subway_station(lat, lon, json_path=None):
         'distance_m': str(round(distance_m, 1)) + 'm',
         'lines': ','.join([line.lower() for line in lines if 'X' not in line])
     }
+
+
+
+
+
+def build_google_maps_link_nearby(cafe_name, lat, lon, radius=350):
+    
+    if not gmaps_api_key:
+        raise ValueError("Google Maps API key is not set")
+    gmaps = googlemaps.Client(key=gmaps_api_key)
+    # Query Google Places
+    geocode_result = gmaps.places_nearby(
+        keyword=cafe_name, 
+        location=(lat, lon), 
+        radius=radius,  # use a slightly larger radius to make sure the place is included
+    )
+    
+    relevant_types = ['cafe', 'bakery', 'food']
+    relevant_results = [
+        result for result in geocode_result['results']
+        if any(t in relevant_types for t in result.get('types', []))
+    ]
+    closest_place = relevant_results[0]
+    place_id = closest_place['place_id']
+    place_types = closest_place['types']
+    if 'bakery' in place_types:
+        place_type = 'bakery'
+    else:
+        place_type = 'cafe'
+    maps_link = f"https://www.google.com/maps/place/?q=place_id:{place_id}"
+    
+    return maps_link, place_type

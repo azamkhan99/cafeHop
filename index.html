@@ -215,10 +215,6 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* .cafe-card:hover {
-            transform: translateY(-2px);
-        } */
-
         .cafe-image-container {
             position: relative;
             width: 100%;
@@ -226,12 +222,6 @@
             contain: layout style paint;
         }
 
-        /* .cafe-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: filter 0.3s ease;
-        } */
         .cafe-image {
             width: 100%;
             height: 100%;
@@ -360,6 +350,53 @@
             gap: 0.25rem;
             flex-wrap: wrap;
             z-index: 2;
+        }
+
+        .cafe-place-type-icon {
+            position: absolute;
+            top: 0.5rem;
+            left: 0.5rem;
+            font-size: 24px;
+            z-index: 3;
+            line-height: 1;
+        }
+
+        .cafe-share-button {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            flex-shrink: 0;
+            padding: 0;
+            text-decoration: none;
+            color: rgba(0, 0, 0, 0.85);
+            font-size: 14px;
+            z-index: 3;
+        }
+
+        .cafe-share-button:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: scale(1.05);
+        }
+
+        .cafe-share-button:active {
+            transform: scale(0.95);
+        }
+
+        .cafe-share-button svg {
+            width: 12px;
+            height: 12px;
+            fill: currentColor;
         }
 
         .subway-icon {
@@ -590,17 +627,10 @@
         }
 
 
-        // Function to parse cafe info from filename
-        function parseCafeInfo(filename) {
+        // Function to parse cafe name from filename
+        function parseCafeName(filename) {
             // Remove file extension
-            const nameWithoutExt = filename.replace(/\.[^/.]+$/, "");
-
-            // All cafes are visited - rating will come from metadata
-            return {
-                name: nameWithoutExt,
-                visited: true,
-                stars: 0
-            };
+            return filename.replace(/\.[^/.]+$/, "");
         }
 
         // Function to generate star rating HTML using SVG sprite (supports half cups for .5 ratings)
@@ -660,11 +690,7 @@
             if (!routes || routes.length === 0) return '';
 
             const iconsHtml = routes.map(route => {
-                // SVG sprite IDs are based on the filename without extension
-                // The sprite generator uses the file path, so we need to extract just the name
-                // For files like "icons/a.svg", the ID might be "a" or "icons-a"
-                // Let's try both formats
-                const iconId = route; // The route is already lowercase from getSubwayRoutesFromS3
+                const iconId = route; // The route is already lowercase
 
                 return `
                     <span class="subway-icon">
@@ -695,7 +721,7 @@
                         cachedCafes = cachedData;
                         // Continue to render immediately with cached data
                     } else {
-                        // Clear invalid cache (missing eloRating or all null)
+                        // Clear invalid cache (missing eloStarRating or all null)
                         if (cachedData) {
                             localStorage.removeItem(CACHE_KEY);
                         }
@@ -713,7 +739,7 @@
                         // Note: cafes.json is pre-sorted by rating, so we can use it directly for default sort
                         cachedCafes = cafesFromJson.map(cafe => {
                             // Parse cafe name from key if name is not set
-                            const name = cafe.name || parseCafeInfo(cafe.key).name;
+                            const name = cafe.name || parseCafeName(cafe.key);
                             const imageUrl = cafe.imageUrl || `${BUCKET_URL}/${cafe.key}`;
 
                             return {
@@ -728,10 +754,11 @@
                                 subwayDistanceM: cafe.subwayDistanceM || null,
                                 latitude: cafe.latitude || null,
                                 longitude: cafe.longitude || null,
-                                eloRating: cafe.eloRating || null,
                                 eloStarRating: cafe.eloStarRating || null,
                                 stars: cafe.eloStarRating || 0,
                                 notes: cafe.notes || null,
+                                google_maps_link: cafe.google_maps_link || null,
+                                google_maps_place_type: cafe.google_maps_place_type || null,
                                 visited: true
                             };
                         });
@@ -854,12 +881,33 @@
 
             const subwayIconsHtml = generateSubwayIcons(cafe.subwayRoutes);
 
+            // Generate place type icon (coffee bean for cafe, croissant for bakery)
+            let placeTypeIconHtml = '';
+            if (cafe.google_maps_place_type) {
+                const iconEmoji = cafe.google_maps_place_type === 'bakery' ? '🥐' : '☕';
+                placeTypeIconHtml = `<div class="cafe-place-type-icon">${iconEmoji}</div>`;
+            }
+
+            // Generate share button
+            let shareButtonHtml = '';
+            if (cafe.google_maps_link) {
+                shareButtonHtml = `
+                    <a href="${cafe.google_maps_link}" target="_blank" rel="noopener noreferrer" class="cafe-share-button" title="Open in Google Maps" onclick="event.stopPropagation();">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/>
+                        </svg>
+                    </a>
+                `;
+            }
+
             // Use thumbnail for faster loading, fallback to full image
             const imageSrc = cafe.thumbnailUrl || cafe.imageUrl;
             card.innerHTML = `
                 <div class="cafe-image-container">
                     <img class="cafe-image" src="${imageSrc}" alt="${cafe.name}" loading="lazy">
                     ${starsHtml}
+                    ${placeTypeIconHtml}
+                    ${shareButtonHtml}
                     ${subwayIconsHtml}
                 </div>
                 <div class="cafe-name">${cafe.name}</div>
