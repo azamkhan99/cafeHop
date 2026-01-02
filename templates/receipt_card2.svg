@@ -1,0 +1,118 @@
+<!-- templates/receipt_card_instagram_1080x1350.svg -->
+<svg width="1080" height="1350"
+     viewBox="0 0 1080 1350"
+     xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink">
+
+  <defs>
+    <!-- Photo clip -->
+    <clipPath id="photoClip">
+      <rect x="48" y="48" width="984" height="620"/>
+    </clipPath>
+
+    <symbol id="star" viewBox="0 0 24 24">
+    <path d="M12 2.2l2.86 6.03 6.64.55-5.05 4.33 1.53 6.46L12 16.9 6.02 19.57l1.53-6.46L2.5 8.78l6.64-.55L12 2.2z"/>
+  </symbol>
+
+
+    <style>
+  @font-face {
+    font-family: "ReceiptTitle";
+    src: url("{{ font_receipt_title }}") format("truetype");
+    font-weight: bold;
+    font-style: normal;
+  }
+
+  @font-face {
+    font-family: "ReceiptMono";
+    src: url("{{ font_receipt_mono }}") format("truetype");
+    font-weight: normal;
+    font-style: normal;
+  }
+
+  .title {
+    font-family: "Oswald", sans-serif; font-weight: 700;
+    font-size: 80px;
+    letter-spacing: 5px;
+    fill: #161616;
+  }
+
+  .body {
+    font-family: "Courier Prime", monospace; font-weight: 400;
+    font-size: 38px;
+    fill: #1f1f1f;
+  }
+
+  .footer {
+    font-family: "Courier Prime", monospace; font-weight: 400;
+    font-size: 22px;
+    fill: #6b6b6b;
+  }
+
+
+  .muted { fill: #6b6b6b; }
+
+  .dash {
+    stroke: #1a1a1a;
+    stroke-width: 1.8;
+    stroke-dasharray: 10 11;
+    opacity: 0.40;
+  }
+</style>
+
+  </defs>
+
+  <!-- Background -->
+  <rect x="0" y="0" width="1080" height="1350" fill="#FBFAF8"/>
+
+  <!-- Cafe photo -->
+  <image
+    xlink:href="{{ cafe_photo_href }}"
+    x="48" y="48"
+    width="984" height="620"
+    clip-path="url(#photoClip)"
+    preserveAspectRatio="xMidYMid slice"/>
+
+  <!-- Divider below photo -->
+  <line x1="48" y1="712" x2="1032" y2="712" class="dash"/>
+
+  <!-- Title -->
+  <text x="540" y="826" text-anchor="middle" class="title">
+    {{ name | upper }}
+  </text>
+
+  <!-- Divider under title -->
+  <line x1="48" y1="870" x2="1032" y2="870" class="dash"/>
+
+  <!-- Body (consistent spacing; no overlap) -->
+  <text x="48" y="935" class="body">Location: {{ neighborhood }}</text>
+  <!-- Rating (vector stars; no font dependency) -->
+<text x="48" y="1003" class="body">Rating:</text>
+<g transform="translate(210, 975)">
+  {# 5 stars, fill based on rating #}
+  {% for i in range(5) %}
+    <use xlink:href="#star"
+         x="{{ i * 44 }}" y="0"
+         width="34" height="34"
+         fill="{% if i < rating|int %}#161616{% else %}none{% endif %}"
+         stroke="#161616"
+         stroke-width="1.6"/>
+  {% endfor %}
+</g>
+  <text x="48" y="1071" class="body">Subway: {{ subway }} - {{ walk_minutes }} min</text>
+  <text x="48" y="1135" class="body muted">Date: {{ date }}</text>
+
+  <!-- Footer zone begins at y = 1148 (final 15% of 1350px) -->
+  <!-- Footer divider (inside final 15%) -->
+  <line x1="48" y1="1180" x2="1032" y2="1180" class="dash"/>
+
+  <!-- Footer text (inside final 15%) -->
+  <text x="540" y="1245" text-anchor="middle" class="body">
+    Stop by!
+  </text>
+
+  <text x="540" y="1285" text-anchor="middle" class="footer">
+    {{ gmaps_link }}
+  </text>
+
+</svg>

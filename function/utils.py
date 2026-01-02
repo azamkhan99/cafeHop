@@ -308,7 +308,46 @@ def get_closest_subway_station(lat, lon, json_path=None):
         'lines': ','.join([line.lower() for line in lines if 'X' not in line])
     }
 
+def get_closest_citibike_station(lat, lon, json_path=None):
+    
+    if json_path:
+        stations = json.load(open(json_path, 'r'))
+    
+    if stations is None:
+        return None
+    
+    station_lats = np.array([station['lat'] for station in stations])
+    station_lons = np.array([station['lon'] for station in stations])
+    
+    # Vectorized calculation of distances
+    lat_rad = math.radians(lat)
+    lon_rad = math.radians(lon)
+    station_lats_rad = np.radians(station_lats)
+    station_lons_rad = np.radians(station_lons)
+    
+    dlat = station_lats_rad - lat_rad
+    dlon = station_lons_rad - lon_rad
+    
+    a = np.sin(dlat / 2)**2 + np.cos(lat_rad) * np.cos(station_lats_rad) * np.sin(dlon / 2)**2
+    c = 2 * np.arcsin(np.sqrt(a))
+    
+    distances = EARTH_RADIUS_M * c
+    
+    closest_index = np.argmin(distances)
+    closest_station = stations[closest_index]
 
+    closest_station_distance = distances[closest_index]
+    walking_speed_m_per_min = 80  # average walking speed in meters per minute
+    mins_walk = closest_station_distance / walking_speed_m_per_min
+    
+    return {
+        'station_id': closest_station['station_id'],
+        'name': closest_station['name'],
+        'lat': closest_station['lat'],
+        'lon': closest_station['lon'],
+        'distance_m': float(distances[closest_index]),
+        'mins_walk': int(np.ceil(mins_walk))
+    }
 
 
 
