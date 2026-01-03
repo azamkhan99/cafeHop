@@ -309,6 +309,13 @@
             .cafe-image-container:hover .stars-overlay {
                 opacity: 1;
             }
+
+            /* NEW: if you're over the share button, don't show overlay */
+            .cafe-image-container:has(.cafe-share-button:hover) .stars-overlay,
+            .cafe-image-container:has(.cafe-share-button:focus-visible) .stars-overlay,
+            .cafe-image-container:has(.cafe-share-button:active) .stars-overlay {
+                opacity: 0 !important;
+            }
         }
 
         .cafe-image-container.show-stars .stars-overlay {
