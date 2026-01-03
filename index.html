@@ -173,6 +173,8 @@
 
         .filter-label {
             opacity: 0.85;
+            user-select: none !important; /* Prevent text selection globally */
+            -webkit-user-select: none !important; /* For Safari and iOS */            
         }
 
         .filter-select-wrapper {
@@ -442,10 +444,13 @@
         .cafe-share-button:hover {
             background: rgba(255, 255, 255, 1);
             transform: scale(1.05);
+            z-index: 15;
+
         }
 
         .cafe-share-button:active {
             transform: scale(0.95);
+            z-index: 15;
         }
 
         .cafe-share-button svg {
