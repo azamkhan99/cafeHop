@@ -91,6 +91,8 @@
 
         .nav-buttons {
             display: flex;
+            user-select: none !important; /* Prevent text selection globally */
+            -webkit-user-select: none !important; /* For Safari and iOS */
             justify-content: center;
             gap: 0.5rem;
             margin-top: 0.35rem;
@@ -177,6 +179,8 @@
             display: inline-flex;
             align-items: center;
             position: relative;
+            user-select: none !important; /* Prevent text selection globally */
+            -webkit-user-select: none !important; /* For Safari and iOS */
         }
 
         .filter-select {
@@ -256,6 +260,7 @@
             align-items: center;
             opacity: 0;
             transition: opacity 0.15s ease;
+            z-index: 1;
             color: gold;
             font-size: 2rem;
             gap: 0.5rem;
@@ -419,7 +424,7 @@
             text-decoration: none;
             color: rgba(0, 0, 0, 0.85);
             font-size: 14px;
-            z-index: 3;
+            z-index: 10;
             touch-action: manipulation;
         }
 
