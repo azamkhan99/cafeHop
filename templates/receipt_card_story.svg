@@ -15,6 +15,8 @@
       <path d="M12 2.2l2.86 6.03 6.64.55-5.05 4.33 1.53 6.46L12 16.9 6.02 19.57l1.53-6.46L2.5 8.78l6.64-.55L12 2.2z"/>
     </symbol>
 
+    {% include "subway_symbols.svg" %}
+
     <style>
       @font-face {
         font-family: "ReceiptTitle";
@@ -90,7 +92,7 @@
 
   <!-- Rating -->
   <text x="48" y="1460" class="body">Rating:</text>
-  <g transform="translate(250, 1430)">
+  <g transform="translate(240, 1430)">
     {% for i in range(5) %}
       <use xlink:href="#star"
            x="{{ i * 52 }}" y="0"
@@ -101,19 +103,24 @@
     {% endfor %}
   </g>
 
-  <text x="48" y="1530" class="body">Subway: {{ subway }} - {{ walk_minutes }} min</text>
-  <text x="48" y="1600" class="body muted">Date: {{ date }}</text>
+   <!-- Subway icons -->
+   <text x="48" y="1530" class="body">Subway:</text>
+   <g transform="translate(240, 1500)">
+     {% for line in subway_lines %}
+       <use href="#line-{{ line }}"
+            x="{{ loop.index0 * 44 }}"
+            width="36" height="36"/>
+     {% endfor %}
+   </g>
+
+  <text x="48" y="1600" class="body">Citibike: {{ citibike_station }}</text>
+  <text x="48" y="1670" class="body muted">Date: {{ date }}</text>
 
   <!-- Footer divider (tight + light) -->
-  <line x1="48" y1="1655" x2="1032" y2="1655" class="dash"/>
-
-  <!-- CTA -->
-  <text x="540" y="1755" text-anchor="middle" class="body">
-    Stop by!
-  </text>
+  <line x1="48" y1="1740" x2="1032" y2="1740" class="dash"/>
 
   <!-- Link (smaller, quieter) -->
-  <text x="540" y="1820" text-anchor="middle" class="footer">
+  <text x="540" y="1800" text-anchor="middle" class="footer">
     {{ gmaps_link }}
   </text>
 

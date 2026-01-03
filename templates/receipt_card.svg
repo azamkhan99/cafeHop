@@ -13,7 +13,8 @@
     <symbol id="star" viewBox="0 0 24 24">
     <path d="M12 2.2l2.86 6.03 6.64.55-5.05 4.33 1.53 6.46L12 16.9 6.02 19.57l1.53-6.46L2.5 8.78l6.64-.55L12 2.2z"/>
   </symbol>
-
+  
+  {% include "subway_symbols.svg" %}
 
     <style>
   @font-face {
@@ -88,7 +89,7 @@
   <text x="48" y="935" class="body">Location: {{ neighborhood }}</text>
   <!-- Rating (vector stars; no font dependency) -->
 <text x="48" y="1003" class="body">Rating:</text>
-<g transform="translate(210, 975)">
+<g transform="translate(220, 975)">
   {# 5 stars, fill based on rating #}
   {% for i in range(5) %}
     <use xlink:href="#star"
@@ -99,19 +100,25 @@
          stroke-width="1.6"/>
   {% endfor %}
 </g>
-  <text x="48" y="1071" class="body">Subway: {{ subway }} - {{ walk_minutes }} min</text>
-  <text x="48" y="1135" class="body muted">Date: {{ date }}</text>
+
+  <!-- Subway icons -->
+  <text x="48" y="1071" class="body">Subway:</text>
+  <g transform="translate(220, 1041)">
+    {% for line in subway_lines %}
+      <use href="#line-{{ line }}"
+           x="{{ loop.index0 * 44 }}"
+           width="36" height="36"/>
+    {% endfor %}
+  </g>
+  <text x="48" y="1139" class="body">Citibike: {{ citibike_station }}</text>
+  <text x="48" y="1207" class="body muted">Date: {{ date }}</text>
 
   <!-- Footer zone begins at y = 1148 (final 15% of 1350px) -->
   <!-- Footer divider (inside final 15%) -->
-  <line x1="48" y1="1180" x2="1032" y2="1180" class="dash"/>
+  <line x1="48" y1="1252" x2="1032" y2="1252" class="dash"/>
 
   <!-- Footer text (inside final 15%) -->
-  <text x="540" y="1245" text-anchor="middle" class="body">
-    Stop by!
-  </text>
-
-  <text x="540" y="1285" text-anchor="middle" class="footer">
+  <text x="540" y="1305" text-anchor="middle" class="footer">
     {{ gmaps_link }}
   </text>
 

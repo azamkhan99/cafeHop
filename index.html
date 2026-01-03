@@ -27,6 +27,7 @@
             padding: 0;
             margin: 0;
             color: rgba(0, 0, 0, 0.87);
+            user-select: none;
         }
 
         .header {
@@ -210,7 +211,7 @@
             overflow: hidden;
             transition: transform 0.2s ease;
             position: relative;
-            cursor: pointer;
+            cursor: default;
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
         }
@@ -289,12 +290,12 @@
         @media (hover: hover) and (pointer: fine) {
 
             /* Hover only on devices that support it (desktop) */
-            .cafe-card:hover .stars-overlay {
+            .cafe-image-container:hover .stars-overlay {
                 opacity: 1;
             }
         }
 
-        .cafe-card.show-stars .stars-overlay {
+        .cafe-image-container.show-stars .stars-overlay {
             opacity: 1;
         }
 
@@ -335,10 +336,10 @@
 
         }
 
-        .cafe-neighborhood::before {
-            content: "— ";
-            opacity: 0.4;
-        }
+        /* .cafe-neighborhood::before {
+            content: "📍 ";
+            opacity: 0.9;
+        } */
 
         .cafe-subway-icons {
             position: absolute;
@@ -361,12 +362,27 @@
             line-height: 1;
         }
 
+        .bike-info {
+            position: absolute;
+            bottom: 0.5rem;
+            left: 0.5rem;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            font-size: 0.85rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Space Grotesk', sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
         .cafe-share-button {
             position: absolute;
             top: 0.5rem;
             right: 0.5rem;
-            width: 22px;
-            height: 22px;
+            width: 20px;
+            height: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -397,6 +413,28 @@
             width: 12px;
             height: 12px;
             fill: currentColor;
+        }
+
+        .cafe-pin {
+            text-decoration: none !important;
+            color: black;
+            font-size: 0.78rem;
+            opacity: 0.8;
+            cursor: pointer;
+            transition: opacity 0.2s ease, transform 0.1s ease;
+        }
+
+        .cafe-pin:hover,
+        .cafe-pin:focus,
+        .cafe-pin:active {
+            text-decoration: none !important;
+            opacity: 0.8;
+            transform: scale(1.2);
+        }
+
+        .cafe-pin:active {
+            opacity: 0.9;
+            transform: scale(0.95);
         }
 
         .subway-icon {
@@ -759,6 +797,8 @@
                                 notes: cafe.notes || null,
                                 google_maps_link: cafe.google_maps_link || null,
                                 google_maps_place_type: cafe.google_maps_place_type || null,
+                                // closest_citibike_station_name: cafe.closest_citibike_station_name || '',
+                                shareCardPngUrl: cafe.shareCardPngUrl || '',
                                 visited: true
                             };
                         });
@@ -857,6 +897,37 @@
             renderBatch();
         }
 
+        // Function to handle sharing the image
+        async function shareImage(imageUrl, fileName) {
+            try {
+                const response = await fetch(imageUrl, {
+                mode: "cors",
+                cache: "no-store",
+                });
+
+                if (!response.ok) {
+                throw new Error(`Download failed: ${response.status}`);
+                }
+
+                const blob = await response.blob();
+
+                const blobUrl = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+
+                a.href = blobUrl;
+                a.download = `${fileName}.png`; // name user gets
+                document.body.appendChild(a);
+                a.click();
+
+                a.remove();
+                URL.revokeObjectURL(blobUrl);
+            } catch (err) {
+                console.error("Download error:", err);
+                alert("Download failed.");
+            }
+            }
+
+
         // Extract card creation into a separate function for reusability
         function createCafeCard(cafe) {
             const card = document.createElement('div');
@@ -875,8 +946,14 @@
                 </div>
             `;
 
+            // const neighborhoodHtml = cafe.neighborhood
+            //     ? `<div class="cafe-neighborhood">${cafe.neighborhood}</div>`
+            //     : '';
             const neighborhoodHtml = cafe.neighborhood
-                ? `<div class="cafe-neighborhood">${cafe.neighborhood}</div>`
+                ? `<div class="cafe-neighborhood">
+                    <a href="${cafe.google_maps_link}" target="_blank" rel="noopener noreferrer" class="cafe-pin" title="Open in Google Maps">📍</a>
+                    ${cafe.neighborhood}
+                </div>`
                 : '';
 
             const subwayIconsHtml = generateSubwayIcons(cafe.subwayRoutes);
@@ -888,15 +965,23 @@
                 placeTypeIconHtml = `<div class="cafe-place-type-icon">${iconEmoji}</div>`;
             }
 
-            // Generate share button
-            let shareButtonHtml = '';
-            if (cafe.google_maps_link) {
-                shareButtonHtml = `
-                    <a href="${cafe.google_maps_link}" target="_blank" rel="noopener noreferrer" class="cafe-share-button" title="Open in Google Maps" onclick="event.stopPropagation();">
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            // Generate bike info (bottom-left corner)
+            // let bikeInfoHtml = '';
+            // if (cafe.closest_citibike_station_name) {
+            //     const bikeEmoji = '🚴 ' + cafe.closest_citibike_station_name;
+            //     bikeInfoHtml = `<div class="bike-info">${bikeEmoji}</div>`;
+            // }
+
+            // Generate share button for using the Web Share API
+            let shareCardButtonHtml = '';
+
+            if (cafe.shareCardPngUrl && navigator.share) {
+                shareCardButtonHtml = `
+                    <button class="cafe-share-button" title="Share Cafe" onclick="shareImage('${cafe.shareCardPngUrl}', '${cafe.name}')">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                             <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/>
                         </svg>
-                    </a>
+                    </button>
                 `;
             }
 
@@ -907,23 +992,25 @@
                     <img class="cafe-image" src="${imageSrc}" alt="${cafe.name}" loading="lazy">
                     ${starsHtml}
                     ${placeTypeIconHtml}
-                    ${shareButtonHtml}
                     ${subwayIconsHtml}
+                    ${shareCardButtonHtml}
                 </div>
                 <div class="cafe-name">${cafe.name}</div>
                 ${neighborhoodHtml}
             `;
 
+            const imageContainer = card.querySelector('.cafe-image-container');
+
             // Add click/tap handler to toggle stars overlay on touch devices
             let touchStartTime = 0;
             let touchStartY = 0;
 
-            card.addEventListener('touchstart', function (e) {
+            imageContainer.addEventListener('touchstart', function (e) {
                 touchStartTime = Date.now();
                 touchStartY = e.touches[0].clientY;
             }, { passive: true });
 
-            card.addEventListener('touchend', function (e) {
+            imageContainer.addEventListener('touchend', function (e) {
                 const touchEndTime = Date.now();
                 const touchEndY = e.changedTouches[0].clientY;
                 const touchDuration = touchEndTime - touchStartTime;
@@ -932,22 +1019,21 @@
                 // Only trigger if it's a quick tap (not a swipe or long press)
                 if (touchDuration < 300 && touchDistance < 10) {
                     e.preventDefault();
-                    toggleStars(card);
+                    toggleStars(imageContainer);
                 }
             });
 
-            card.addEventListener('click', function (e) {
+            imageContainer.addEventListener('click', function (e) {
                 // For mouse clicks on desktop
-                toggleStars(card);
+                toggleStars(imageContainer);
             });
 
             function toggleStars(cardElement) {
-
                 // Check if this card is already showing stars
                 const isShowing = cardElement.classList.contains('show-stars');
 
                 // Close all cards first
-                document.querySelectorAll('.cafe-card').forEach(c => {
+                document.querySelectorAll('.cafe-image-container').forEach(c => {
                     c.classList.remove('show-stars');
                 });
 
