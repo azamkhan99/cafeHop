@@ -462,6 +462,10 @@
             fill: currentColor;
         }
 
+        .cafe-share-button:active ~ .stars-overlay {
+            opacity: 0 !important;
+            }
+
         .cafe-pin {
             text-decoration: none !important;
             color: black;
@@ -1047,6 +1051,18 @@
             `;
 
             const imageContainer = card.querySelector('.cafe-image-container');
+
+            const shareBtn = card.querySelector('.cafe-share-button');
+            if (shareBtn) {
+            const stop = (e) => {
+                e.stopPropagation();
+                // don't preventDefault here, so the button still works normally
+            };
+
+            shareBtn.addEventListener('touchstart', stop, { passive: true });
+            shareBtn.addEventListener('touchend', stop, { passive: true });
+            shareBtn.addEventListener('click', stop);
+            }
 
             // Add click/tap handler to toggle stars overlay on touch devices
             let touchStartTime = 0;
