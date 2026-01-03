@@ -1116,6 +1116,20 @@
             });
         }
 
+        document.querySelectorAll('.cafe-share-button').forEach(button => {
+        button.addEventListener('touchstart', event => {
+            event.stopPropagation(); // Prevent parent elements from being triggered
+            console.log('Share button tapped');
+            // Add your share functionality here
+        }, { passive: true });
+
+        button.addEventListener('click', event => {
+            event.stopPropagation(); // Prevent parent elements from being triggered
+            console.log('Share button clicked');
+            // Add your share functionality here
+        });
+    });
+
         // Load images when page loads
         document.addEventListener('DOMContentLoaded', loadImages);
     </script>
