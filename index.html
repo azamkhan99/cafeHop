@@ -300,6 +300,8 @@
         }
 
         .cafe-name {
+            user-select: none !important; /* Prevent text selection globally */
+            -webkit-user-select: none !important; /* For Safari and iOS */
             padding: 0.6rem 0rem 0rem 0rem;
             font-size: 1.4rem;
             text-align: center;
@@ -313,6 +315,8 @@
         }
 
         .cafe-notes {
+            user-select: none !important; /* Prevent text selection globally */
+            -webkit-user-select: none !important; /* For Safari and iOS */
             font-family: 'Dancing Script', 'Brush Script MT', cursive;
             font-size: 1rem;
             color: rgba(255, 255, 255, 0.9);
@@ -326,6 +330,8 @@
         }
 
         .cafe-neighborhood {
+            user-select: none !important; /* Prevent text selection globally */
+            -webkit-user-select: none !important; /* For Safari and iOS */
             font-family: 'Space Grotesk', sans-serif;
             font-size: 0.78rem;
             letter-spacing: 0.16em;
@@ -355,6 +361,8 @@
 
         .cafe-place-type-icon {
             position: absolute;
+            user-select: none !important; /* Prevent text selection globally */
+            -webkit-user-select: none !important; /* For Safari and iOS */
             top: 0.5rem;
             left: 0.5rem;
             font-size: 24px;
@@ -381,8 +389,8 @@
             position: absolute;
             top: 0.5rem;
             right: 0.5rem;
-            width: 20px;
-            height: 20px;
+            width: 22px;
+            height: 22px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -398,6 +406,18 @@
             color: rgba(0, 0, 0, 0.85);
             font-size: 14px;
             z-index: 3;
+            touch-action: manipulation;
+        }
+
+        .cafe-share-button::before {
+            content: '';
+            position: absolute;
+            top: -11px; /* Expand the hitbox */
+            left: -11px;
+            width: 44px; /* Minimum recommended touch target size */
+            height: 44px; /* Minimum recommended touch target size */
+            background: transparent; /* Invisible hitbox */
+            z-index: -1; /* Keep it behind the button */
         }
 
         .cafe-share-button:hover {
