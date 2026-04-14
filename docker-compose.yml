@@ -1,0 +1,115 @@
+# Full local stack: LocalStack (S3 + DynamoDB), cafe API, image API, static site.
+#
+# Start (from repo root):
+#   docker compose up --build
+#
+# Open: http://127.0.0.1:3000/add.html
+# APIs: http://127.0.0.1:8000 (cafe), http://127.0.0.1:8002 (image)
+# LocalStack: http://localhost:4566
+#
+# If image pulls fail with "proxyconnect tcp ... 3128: i/o timeout": Docker is using
+# a broken HTTP proxy. Fix: Docker Desktop → Settings → Resources → Proxies → disable,
+# or unset HTTP_PROXY/HTTPS_PROXY for this shell before `docker compose up`.
+#
+# LocalStack expects LOCALSTACK_AUTH_TOKEN — repo-root `.env` (gitignored). See docs/localstack.md.
+#
+# Stop: docker compose down
+# Logs: docker compose logs -f cafe-api
+
+services:
+  localstack:
+    image: localstack/localstack:latest
+    container_name: cafehop-localstack
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=s3,dynamodb
+      - DEBUG=0
+      - PERSISTENCE=0
+      # Required for current LocalStack Docker images; set in `.env` or export (see header).
+      - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN}
+      # Presigned S3 URLs and public links usable from the host browser
+      - LOCALSTACK_HOST=localhost
+      - HOSTNAME_EXTERNAL=localhost
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python3 -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:4566/_localstack/health').read()\" || exit 1",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 25s
+
+  init-aws:
+    image: amazon/aws-cli:2.17.52
+    container_name: cafehop-init-aws
+    depends_on:
+      localstack:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://localstack:4566
+      BUCKET_NAME: cafehop-local-photos
+      TABLE_NAME: cafehop-cafes
+    volumes:
+      - ./scripts/localstack_setup_resources.sh:/setup.sh:ro
+    entrypoint: ["/bin/bash", "/setup.sh"]
+
+  cafe-api:
+    build:
+      context: .
+      dockerfile: services/cafe/Dockerfile
+    container_name: cafehop-cafe-api
+    ports:
+      - "8000:8000"
+    environment:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://localstack:4566
+      TABLE_NAME: cafehop-cafes
+      BUCKET_NAME: cafehop-local-photos
+      BUCKET_URL: http://localhost:4566/cafehop-local-photos
+    volumes:
+      # NYC subway precompute for get_closest_subway_station (same path geocoding.py uses under /app).
+      - ./services/cafe/gtfs_precomputed.json:/app/gtfs_precomputed.json:ro
+    depends_on:
+      init-aws:
+        condition: service_completed_successfully
+
+  image-api:
+    build:
+      context: .
+      dockerfile: services/image/Dockerfile
+    container_name: cafehop-image-api
+    ports:
+      - "8002:8002"
+    environment:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://localstack:4566
+      # Host used in presigned PUT URLs (browser must reach it; not the in-compose hostname).
+      S3_PUBLIC_ENDPOINT_URL: http://127.0.0.1:4566
+      BUCKET_NAME: cafehop-local-photos
+    depends_on:
+      init-aws:
+        condition: service_completed_successfully
+
+  # Python http.server (same base family as cafe-api) — avoids pulling nginx.
+  web:
+    image: python:3.12-slim-bookworm
+    container_name: cafehop-web
+    working_dir: /srv
+    volumes:
+      - ./web:/srv:ro
+    command: ["python", "-m", "http.server", "8080", "--bind", "0.0.0.0"]
+    ports:
+      - "3000:8080"
+    depends_on:
+      - cafe-api
+      - image-api

@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Cup Schema - Azam's NYC Coffee Dataset</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/lite.umd.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #fafafa;
+            padding: 0;
+            margin: 0;
+            color: rgba(0, 0, 0, 0.87);
+        }
+
+        .header {
+            text-align: center;
+            width: 100%;
+            padding: 2.25rem 2rem;
+            background: #000000;
+            border-radius: 0;
+            color: white;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.55rem;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .header h1 {
+            font-family: 'Anton', sans-serif;
+            font-size: 4rem;
+            font-weight: 400;
+            margin: 0;
+            letter-spacing: 0.02em;
+            color: white;
+            position: relative;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            gap: 0rem;
+        }
+
+        .header-title-icon {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+        }
+
+        .header .subtitle {
+            font-family: 'Courier New', 'Courier', 'Monaco', 'Menlo', monospace;
+            font-size: 0.875rem;
+            font-weight: 400;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 0.15rem;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 0.35rem;
+            margin-bottom: 0.35rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .nav-button {
+            padding: 0.625rem 1.5rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border: none;
+            border-radius: 2px;
+            background-color: rgba(255, 255, 255, 0.12);
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 0.0892857143em;
+        }
+
+        .nav-button:hover {
+            background-color: rgba(255, 255, 255, 0.16);
+        }
+
+        .nav-button.active {
+            background-color: rgba(255, 255, 255, 0.24);
+        }
+
+        .content-wrapper {
+            padding: 2rem;
+        }
+
+        .form-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #2d3748;
+            font-weight: 500;
+        }
+
+        .form-group input[type="file"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px dashed #0000003a;
+            border-radius: 8px;
+            background-color: #f7fafc;
+            cursor: pointer;
+            transition: border-color 0.3s ease, background-color 0.3s ease;
+        }
+
+        .form-group input[type="file"]:hover {
+            border-color: #0000003a;
+            background-color: #edf2f7;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="number"],
+        .form-group input[type="password"],
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #0000003a;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            color: #2d3748;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input[type="text"]:focus,
+        .form-group input[type="number"]:focus,
+        .form-group input[type="password"]:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #0000003a;
+        }
+
+        .password-wrapper {
+            position: relative;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #718096;
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 0.25rem 0.5rem;
+            transition: color 0.2s ease;
+            z-index: 10;
+        }
+
+        .password-toggle:hover {
+            color: #2d3748;
+        }
+
+        .form-group input[type="password"] {
+            padding-right: 3rem;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .form-group input[type="number"] {
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+
+        .form-group input[type="number"]::-webkit-outer-spin-button,
+        .form-group input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            appearance: none;
+            margin: 0;
+        }
+
+        .submit-button {
+            width: 100%;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border: none;
+            border-radius: 4px;
+            background-color: #212121;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.0892857143em;
+        }
+
+        .submit-button:hover {
+            background-color: #424242;
+        }
+
+        .submit-button:active {
+            background-color: #616161;
+        }
+
+        .submit-button:disabled {
+            background-color: rgba(0, 0, 0, 0.12);
+            color: rgba(0, 0, 0, 0.26);
+            cursor: not-allowed;
+        }
+
+        .file-preview {
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .file-preview img {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 8px;
+        }
+
+        .file-name {
+            margin-top: 0.5rem;
+            color: #4a5568;
+            font-size: 0.9rem;
+        }
+
+        .comparison-section {
+            display: none;
+            margin-top: 2rem;
+        }
+
+        .comparison-section.active {
+            display: block;
+        }
+
+        .comparison-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .comparison-header h2 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: rgba(0, 0, 0, 0.87);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .comparison-header p {
+            color: rgba(0, 0, 0, 0.6);
+            font-size: 0.875rem;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        .comparison-container {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: white;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .comparison-cafe {
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 1.5rem;
+            border: 2px solid transparent;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 150px;
+        }
+
+        .comparison-cafe:hover {
+            border-color: rgba(0, 0, 0, 0.2);
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+
+        .comparison-cafe:active {
+            border-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .comparison-cafe-name {
+            font-family: 'Roboto', sans-serif;
+            font-weight: 500;
+            font-size: 1rem;
+            color: rgba(0, 0, 0, 0.87);
+            margin-bottom: 0.5rem;
+        }
+
+        .comparison-cafe-neighborhood {
+            font-family: 'Roboto', sans-serif;
+            color: rgba(0, 0, 0, 0.6);
+            font-size: 0.875rem;
+        }
+
+        .comparison-or {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: rgba(0, 0, 0, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            background: white;
+            flex-shrink: 0;
+        }
+
+
+        .comparison-progress {
+            text-align: center;
+            margin-top: 1rem;
+            font-family: 'Roboto', sans-serif;
+            color: rgba(0, 0, 0, 0.6);
+            font-size: 0.875rem;
+        }
+
+        .comparison-cant-decide {
+            width: 100%;
+            margin-top: 1rem;
+            padding: 0.75rem 1.5rem;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            border-radius: 2px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.0892857143em;
+            background-color: white;
+            color: rgba(0, 0, 0, 0.6);
+        }
+
+        .comparison-cant-decide:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        .comparison-loading {
+            text-align: center;
+            padding: 2rem;
+            font-family: 'Roboto', sans-serif;
+            color: rgba(0, 0, 0, 0.6);
+        }
+
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-top: 4px solid rgba(0, 0, 0, 0.87);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 2rem auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .upload-status {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .upload-status h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            margin-top: 1rem;
+            color: rgba(0, 0, 0, 0.87);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 1rem;
+        }
+
+        .upload-status p {
+            font-family: 'Roboto', sans-serif;
+            color: rgba(0, 0, 0, 0.6);
+        }
+
+        @media (max-width: 480px) {
+            .comparison-container {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+                padding: 0.75rem;
+            }
+
+            .comparison-vs {
+                display: none;
+            }
+
+            .comparison-cafe {
+                padding: 1rem;
+                min-height: 120px;
+            }
+
+            .comparison-cafe-name {
+                font-size: 0.9rem;
+            }
+
+            .comparison-cafe-neighborhood {
+                font-size: 0.75rem;
+            }
+
+            .comparison-or {
+                width: 35px;
+                height: 35px;
+                font-size: 0.65rem;
+                margin: 0 auto;
+                grid-column: 1;
+            }
+        }
+
+        @media (max-width: 768px) and (min-width: 481px) {
+            .comparison-container {
+                gap: 0.75rem;
+                padding: 1rem;
+            }
+
+            .comparison-cafe {
+                padding: 1.25rem;
+                min-height: 140px;
+            }
+
+            .comparison-cafe-name {
+                font-size: 0.95rem;
+            }
+
+            .comparison-or {
+                width: 38px;
+                height: 38px;
+                font-size: 0.7rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .content-wrapper {
+                padding: 1rem;
+            }
+
+            .header {
+                padding: 2rem 1.5rem;
+            }
+
+            .header h1 {
+                font-size: 2.25rem;
+            }
+
+            .header h1::after {
+                margin-left: 0.5rem;
+                font-size: 1.75rem;
+            }
+
+            .header .subtitle {
+                font-size: 0.9rem;
+                letter-spacing: 0.1em;
+            }
+
+            .nav-buttons {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .nav-button {
+                padding: 0.55rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .form-container {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>
+                The Cup Schema
+                <img src="coffeecup2.png" alt="Coffee cup" class="header-title-icon">
+            </h1>
+            <p class="subtitle">Azam's NYC Coffee Dataset</p>
+        </div>
+        <div class="nav-buttons">
+            <a href="index.html" class="nav-button">Gallery View</a>
+            <a href="map.html" class="nav-button">Map View</a>
+            <a href="add.html" class="nav-button active">Add Café</a>
+        </div>
+    </div>
+
+    <div class="content-wrapper">
+        <div class="form-container">
+            <form id="cafe-form">
+                <div class="form-group">
+                    <label for="photo">Photo</label>
+                    <input type="file" accept="image/*" id="photo" required />
+                    <div class="file-preview" id="file-preview"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="cafe">Café Name</label>
+                    <input type="text" id="cafe" placeholder="Enter café name" required />
+                </div>
+
+                <div class="form-group">
+                    <label for="notes">Notes</label>
+                    <textarea id="notes" placeholder="Add any notes about this café..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="upload-password">Upload Password</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="upload-password" placeholder="Enter upload password" required />
+                        <button type="button" class="password-toggle" id="password-toggle"
+                            aria-label="Toggle password visibility">
+                            <span id="toggle-icon">👁️</span>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-button" id="submit-btn">Log Café</button>
+            </form>
+
+            <!-- Comparison Section -->
+            <div class="comparison-section" id="comparison-section">
+                <div class="comparison-header">
+                    <h2>Which do you prefer?</h2>
+                </div>
+                <div id="comparison-content">
+                    <div class="comparison-loading">Loading cafes for comparison...</div>
+                </div>
+                <div class="comparison-progress" id="comparison-progress"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="api-config.js"></script>
+    <script>
+        const C = window.CafeHopConfig || {};
+        const AUTH_LAMBDA_URL = C.authUrl || '';
+        const IMAGE_SERVICE_URL = C.imageUrl || '';
+        const CAFE_URL = C.cafeUrl || '';
+        const BUCKET_URL = C.bucketUrl || '';
+
+        let token = null; // Store JWT token in memory
+        let storedOriginalFile = null; // Store original file for GPS extraction
+        let storedJpgFile = null; // Store converted JPG file for upload
+        let storedFormData = null; // Store form data for later upload
+        let comparisonResults = []; // Store comparison results
+        let currentComparisonIndex = 0;
+        let comparisonCafes = []; // Store cafes to compare against
+
+        // --- 0. Password toggle functionality ---
+        const passwordInput = document.getElementById('upload-password');
+        const passwordToggle = document.getElementById('password-toggle');
+        const toggleIcon = document.getElementById('toggle-icon');
+
+        passwordToggle.addEventListener('click', function () {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            toggleIcon.textContent = type === 'password' ? '👁️' : '🙈';
+        });
+
+        // --- 1. Preview uploaded image ---
+        document.getElementById('photo').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            const preview = document.getElementById('file-preview');
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    preview.innerHTML = `
+                <img src="${e.target.result}" alt="Preview" />
+                <div class="file-name">${file.name}</div>
+            `;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.innerHTML = '';
+            }
+        });
+
+        // --- 2. Extract GPS coordinates ---
+        function getGPSFromFile(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = async function (e) {
+                    try {
+                        const exifData = await exifr.parse(e.target.result, { gps: true });
+                        if (exifData && exifData.latitude !== undefined && exifData.longitude !== undefined) {
+                            resolve({ latitude: exifData.latitude, longitude: exifData.longitude });
+                        } else {
+                            resolve(null);
+                        }
+                    } catch (err) {
+                        resolve(null);
+                    }
+                };
+                reader.onerror = () => resolve(null);
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // --- 3. Get JWT token from Auth Lambda ---
+        async function getToken(password) {
+            const res = await fetch(AUTH_LAMBDA_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ password })
+            });
+            if (!res.ok) throw new Error("Auth failed");
+            const data = await res.json();
+            return data.token;
+        }
+
+        // --- 3. Convert image to JPG with resizing for performance ---
+        function convertToJPG(file) {
+            return new Promise(async (resolve, reject) => {
+                try {
+                    // Read file as ArrayBuffer to get EXIF data
+                    const arrayBuffer = await new Promise((res, rej) => {
+                        const reader = new FileReader();
+                        reader.onload = () => res(reader.result);
+                        reader.onerror = rej;
+                        reader.readAsArrayBuffer(file);
+                    });
+
+                    // Get EXIF orientation (only checking for 90° CCW rotation - orientation 6)
+                    const exifData = await exifr.parse(arrayBuffer, { orientation: true });
+                    const orientation = exifData?.Orientation || 1;
+                    const needsRotation = orientation === 6; // 90° counter-clockwise
+
+                    // Create image from array buffer
+                    const blob = new Blob([arrayBuffer], { type: file.type });
+                    const url = URL.createObjectURL(blob);
+
+                    const img = new Image();
+                    img.onload = function () {
+                        // Resize to max 800px width for good quality in gallery (250px display height)
+                        const MAX_WIDTH = 800;
+
+                        let width = img.width;
+                        let height = img.height;
+
+                        // If rotated 90° CCW, swap dimensions for canvas
+                        if (needsRotation) {
+                            [width, height] = [height, width];
+                        }
+
+                        // Resize if larger than max width, maintaining aspect ratio
+                        if (width > MAX_WIDTH) {
+                            const ratio = MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                            height = height * ratio;
+                        }
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+
+                        // Use faster rendering settings
+                        ctx.imageSmoothingEnabled = true;
+                        ctx.imageSmoothingQuality = 'high';
+
+                        // Apply rotation if needed (90° counter-clockwise)
+                        if (needsRotation) {
+                            ctx.save();
+                            ctx.translate(width / 2, height / 2);
+                            ctx.rotate(-Math.PI / 2); // 90° counter-clockwise
+                            ctx.drawImage(img, -img.width / 2, -img.height / 2, img.width, img.height);
+                            ctx.restore();
+                        } else {
+                            // Normal orientation - just draw the image
+                            ctx.drawImage(img, 0, 0, width, height);
+                        }
+
+                        // Clean up object URL
+                        URL.revokeObjectURL(url);
+
+                        // Use 85% quality for good balance
+                        canvas.toBlob(function (blob) {
+                            if (blob) {
+                                // Create a new File object with .jpg extension
+                                const jpgFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.jpg'), {
+                                    type: 'image/jpeg',
+                                    lastModified: Date.now()
+                                });
+                                resolve(jpgFile);
+                            } else {
+                                reject(new Error('Failed to convert image to JPG'));
+                            }
+                        }, 'image/jpeg', 0.85);
+                    };
+                    img.onerror = () => {
+                        URL.revokeObjectURL(url);
+                        reject(new Error('Failed to load image'));
+                    };
+                    img.src = url;
+                } catch (error) {
+                    reject(new Error('Failed to process image: ' + error.message));
+                }
+            });
+        }
+
+        // --- 4. Get presigned URL ---
+        async function getPresignedUrl(uploadData) {
+            try {
+                const res = await fetch(IMAGE_SERVICE_URL + "/presigned-url", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify(uploadData)
+                });
+
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    let errorMessage = "Failed to get presigned URL";
+                    try {
+                        const errorData = JSON.parse(errorText);
+                        errorMessage = errorData.error || errorMessage;
+                    } catch (e) {
+                        errorMessage = errorText || errorMessage;
+                    }
+
+                    if (res.status === 401) {
+                        errorMessage = "Authentication failed. Please try again.";
+                        token = null; // Clear invalid token
+                    } else if (res.status === 403) {
+                        errorMessage = "Access denied. Please check your credentials.";
+                    } else if (res.status === 0) {
+                        errorMessage = "Network error. Please check your connection and CORS settings.";
+                    }
+
+                    throw new Error(errorMessage + ` (Status: ${res.status})`);
+                }
+
+                return await res.json();
+            } catch (error) {
+                if (error.message.includes("Failed to fetch") || error.message.includes("Network error")) {
+                    throw new Error("Network error: Could not connect to server. Please check:\n1. Your internet connection\n2. CORS settings on the Lambda function\n3. The Lambda function URL is correct");
+                }
+                throw error;
+            }
+        }
+
+        // --- 5. Fetch random cafes for comparison (from ranking service) ---
+        async function fetchRandomCafes(numCafes = 5) {
+            try {
+                const url = `${CAFE_URL}/ranking/cafes?limit=${numCafes}`;
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch cafes: ${response.status}`);
+                }
+                const data = await response.json();
+                return data.cafes || [];
+            } catch (error) {
+                console.error('Error fetching cafes for comparison:', error);
+                return [];
+            }
+        }
+
+        // --- 6. Display comparison UI ---
+        function displayComparison(newCafeName, newCafeNeighborhood, existingCafe) {
+            const content = document.getElementById('comparison-content');
+            const progress = document.getElementById('comparison-progress');
+
+            const newCafeNeighborhoodHtml = newCafeNeighborhood ?
+                `<div class="comparison-cafe-neighborhood">${newCafeNeighborhood}</div>` : '';
+            const existingCafeNeighborhoodHtml = existingCafe.neighborhood ?
+                `<div class="comparison-cafe-neighborhood">${existingCafe.neighborhood}</div>` : '';
+
+            // Escape HTML special characters to prevent XSS
+            const escapeHtml = (text) => {
+                if (!text) return '';
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            };
+
+            const escapedKey = escapeHtml(existingCafe.key);
+            const escapedNewCafeName = escapeHtml(newCafeName);
+            const escapedExistingCafeName = escapeHtml(existingCafe.name);
+
+            content.innerHTML = `
+                <div class="comparison-container" id="comparison-container">
+                    <div class="comparison-cafe" id="new-cafe-card" data-cafe-key="${escapedKey}" data-score="1">
+                        <div class="comparison-cafe-name">${escapedNewCafeName}</div>
+                        ${newCafeNeighborhoodHtml}
+                    </div>
+                    <div class="comparison-or">OR</div>
+                    <div class="comparison-cafe" id="existing-cafe-card" data-cafe-key="${escapedKey}" data-score="0">
+                        <div class="comparison-cafe-name">${escapedExistingCafeName}</div>
+                        ${existingCafeNeighborhoodHtml}
+                    </div>
+                </div>
+                <button class="comparison-cant-decide" data-cafe-key="${escapedKey}" data-score="0.5">
+                    I can't decide
+                </button>
+            `;
+
+            progress.textContent = `Comparison ${currentComparisonIndex + 1} of ${comparisonCafes.length}`;
+
+            // Attach event listeners instead of using inline onclick
+            document.getElementById('new-cafe-card').addEventListener('click', function () {
+                handleComparison(1, existingCafe.key);
+            });
+            document.getElementById('existing-cafe-card').addEventListener('click', function () {
+                handleComparison(0, existingCafe.key);
+            });
+            document.querySelector('.comparison-cant-decide').addEventListener('click', function () {
+                handleComparison(0.5, existingCafe.key);
+            });
+        }
+
+
+        // --- 7. Handle comparison selection ---
+        window.handleComparison = function (score, cafeKey) {
+            comparisonResults.push([cafeKey, score]);
+            currentComparisonIndex++;
+
+            if (currentComparisonIndex < comparisonCafes.length) {
+                // Show next comparison
+                const newCafeName = document.getElementById('cafe').value.trim();
+
+                // Get neighborhood for new cafe (if available from stored data)
+                const newCafeNeighborhood = storedFormData?.neighborhood || null;
+
+                displayComparison(
+                    newCafeName,
+                    newCafeNeighborhood,
+                    comparisonCafes[currentComparisonIndex]
+                );
+            } else {
+                // All comparisons done, show loading spinner and proceed with upload
+                const content = document.getElementById('comparison-content');
+                const progress = document.getElementById('comparison-progress');
+                content.innerHTML = `
+                    <div class="upload-status">
+                        <div class="spinner"></div>
+                        <h3>Logging café...</h3>
+                    </div>
+                `;
+                progress.textContent = '';
+                proceedWithUpload();
+            }
+        };
+
+        // --- 8. Proceed with upload after comparisons ---
+        async function proceedWithUpload() {
+            // Loading spinner is already shown by handleComparison if coming from comparisons
+            // If called directly (no cafes to compare), show spinner now
+            if (comparisonCafes.length === 0) {
+                const content = document.getElementById('comparison-content');
+                content.innerHTML = `
+                    <div class="upload-status">
+                        <div class="spinner"></div>
+                        <h3>Uploading your café...</h3>
+                        <p style="color: #718096; margin-top: 0.5rem;">Please wait while we process your upload</p>
+                    </div>
+                `;
+            }
+
+            try {
+                // Use stored data
+                const jpgFile = storedJpgFile;
+                const originalFile = storedOriginalFile || document.getElementById("photo").files[0];
+                const cafeName = storedFormData?.cafeName || document.getElementById("cafe").value.trim();
+                const notes = storedFormData?.notes || document.getElementById("notes").value.trim();
+                const password = storedFormData?.password || document.getElementById("upload-password").value;
+
+                if (!jpgFile) {
+                    throw new Error("Converted image not found. Please try uploading again.");
+                }
+
+                // --- 1 & 2. Get token and extract GPS in parallel (both are independent) ---
+                const [tokenResult, gpsData] = await Promise.all([
+                    // Get token if not already, or refresh if expired
+                    (async () => {
+                        if (!token) {
+                            return await getToken(password);
+                        } else {
+                            // Token might have expired during comparisons (tokens are valid for 5 minutes)
+                            // Try to refresh it if we have the password
+                            try {
+                                // Simple check: if token exists but might be old, refresh it
+                                // Since tokens expire in 5 minutes and comparisons might take longer, refresh proactively
+                                return await getToken(password);
+                            } catch (err) {
+                                // If refresh fails, try to continue with existing token
+                                return token;
+                            }
+                        }
+                    })(),
+                    // Extract GPS from original file
+                    originalFile ? getGPSFromFile(originalFile) : Promise.resolve(null)
+                ]);
+                token = tokenResult;
+
+                // --- 4. Get presigned URL with comparison results ---
+                // Use the file's actual content type (could be JPG, HEIC, etc.)
+                const uploadData = {
+                    contentType: jpgFile.type || 'image/jpeg',
+                    cafeName,
+                    notes,
+                    latitude: gpsData ? gpsData.latitude : null,
+                    longitude: gpsData ? gpsData.longitude : null,
+                    comparisons: comparisonResults
+                };
+                const { uploadUrl, s3Key } = await getPresignedUrl(uploadData);
+
+                // --- 5. Upload file to S3 ---
+                const uploadRes = await fetch(uploadUrl, {
+                    method: "PUT",
+                    headers: { "Content-Type": jpgFile.type || "image/jpeg" },
+                    body: jpgFile
+                });
+                if (!uploadRes.ok) throw new Error("Failed to upload to S3");
+
+                // --- 6. Thumbnail (image) + register cafe (cafe API) in parallel ---
+                const processPromise = fetch(IMAGE_SERVICE_URL + "/process", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ s3Key: s3Key })
+                });
+                const fromUploadPromise = CAFE_URL ? fetch(CAFE_URL + "/v1/cafes/from-upload", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        s3Key: s3Key,
+                        cafeName: cafeName,
+                        latitude: gpsData ? gpsData.latitude : null,
+                        longitude: gpsData ? gpsData.longitude : null,
+                        notes: notes,
+                        comparisons: comparisonResults
+                    })
+                }) : Promise.resolve(null);
+                const [processRes, fromUploadRes] = await Promise.all([processPromise, fromUploadPromise]);
+                if (processRes && !processRes.ok) {
+                    const detail = await processRes.text();
+                    throw new Error("Thumbnail step failed (" + processRes.status + "): " + detail);
+                }
+                if (fromUploadRes && !fromUploadRes.ok) {
+                    const detail = await fromUploadRes.text();
+                    throw new Error("Cafe registration failed (" + fromUploadRes.status + "): " + detail);
+                }
+
+                alert("Uploaded successfully!");
+                document.getElementById('cafe-form').reset();
+                document.getElementById('cafe-form').style.display = 'block';
+                document.getElementById('file-preview').innerHTML = '';
+                document.getElementById('comparison-section').classList.remove('active');
+                document.getElementById('comparison-content').innerHTML = '<div class="comparison-loading">Loading cafes for comparison...</div>';
+                comparisonResults = [];
+                currentComparisonIndex = 0;
+                comparisonCafes = [];
+                storedOriginalFile = null;
+                storedJpgFile = null;
+                storedFormData = null;
+                token = null;
+
+            } catch (error) {
+                alert("Upload error: " + error.message);
+                token = null;
+            } finally {
+                const btn = document.getElementById('submit-btn');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'Log Café';
+                }
+            }
+        }
+
+        // --- 9. Handle form submission ---
+        document.getElementById('cafe-form').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const file = document.getElementById("photo").files[0];
+            const submitBtn = document.getElementById('submit-btn');
+            const cafeName = document.getElementById("cafe").value.trim();
+            const password = document.getElementById("upload-password").value;
+
+            if (!file || !cafeName || !password) {
+                alert("Please select a photo, enter a café name, and provide the upload password.");
+                return;
+            }
+
+            // Store original file for GPS extraction
+            storedOriginalFile = file;
+
+            const notes = document.getElementById("notes").value.trim();
+
+            // Extract GPS to get neighborhood
+            const gpsData = await getGPSFromFile(file);
+            let neighborhood = null;
+
+            // Try to get neighborhood from GPS (this would need to be computed, but for now we'll leave it null)
+            // The neighborhood will be computed server-side when uploading
+
+            storedFormData = {
+                cafeName: cafeName,
+                notes: notes,
+                password: password,
+                neighborhood: neighborhood
+            };
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Converting image...';
+
+            try {
+                // --- 1. Get token if not already ---
+                if (!token) {
+                    token = await getToken(password);
+                }
+
+                // --- 2. Convert image to JPG immediately and store it ---
+                try {
+                    storedJpgFile = await convertToJPG(file);
+                } catch (conversionError) {
+                    // Check if it's a HEIC file
+                    const fileName = file.name.toLowerCase();
+                    const isHeic = file.type === 'image/heic' || file.type === 'image/heif' ||
+                        fileName.endsWith('.heic') || fileName.endsWith('.heif');
+
+                    // If conversion fails, try to use original file as fallback
+                    if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
+                        storedJpgFile = file;
+                    } else if (isHeic) {
+                        // Do not upload raw HEIC: S3 key is still *.jpg and the thumbnail Lambda often
+                        // cannot decode HEIC (Chrome/Firefox canvas path fails first).
+                        alert(
+                            'Could not convert this HEIC photo in your browser.\n\n' +
+                            'Fix: open this page in Safari (Mac/iPhone), or in Photos use Share → Save as JPEG, then upload that file.'
+                        );
+                        throw conversionError;
+                    } else {
+                        alert('Failed to process image: ' + conversionError.message + '\n\nPlease try selecting a different image file (JPG, PNG, or HEIC).');
+                        throw conversionError;
+                    }
+                }
+
+                // --- 3. Fetch random cafes for comparison ---
+                submitBtn.textContent = 'Loading comparisons...';
+                comparisonCafes = await fetchRandomCafes(5);
+                currentComparisonIndex = 0;
+                comparisonResults = [];
+
+                if (comparisonCafes.length === 0) {
+                    // No cafes to compare, show comparison section with loading and proceed to upload
+                    document.getElementById('cafe-form').style.display = 'none';
+                    document.getElementById('comparison-section').classList.add('active');
+                    proceedWithUpload();
+                    return;
+                }
+
+                // --- 3. Show comparison section ---
+                document.getElementById('cafe-form').style.display = 'none';
+                document.getElementById('comparison-section').classList.add('active');
+
+                // --- 4. Display first comparison ---
+                displayComparison(
+                    cafeName,
+                    storedFormData.neighborhood,
+                    comparisonCafes[0]
+                );
+
+            } catch (error) {
+                alert("Error: " + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Log Café';
+            }
+        });
+
+    </script>
+
+</body>
+
+</html>

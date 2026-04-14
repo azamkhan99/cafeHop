@@ -1,0 +1,79 @@
+[project]
+name = "cafehop"
+version = "0.1.0"
+description = "Serverless cafe photos app with AWS Lambda and S3"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "boto3>=1.28.34",
+    "imageio>=2.37.0",
+    "Pillow>=11.1.0",
+    "pillow_heif>=0.21.0",
+    "streamlit>=1.42.0",
+    "python-dotenv>=1.2.1",
+    "requests>=2.31.0",
+    "geopy>=2.4.0",
+    "numpy>=1.24.0",
+    "googlemaps>=4.10.0",
+]
+
+[dependency-groups]
+# Docker / local: services/cafe (FastAPI + DynamoDB + geocoding)
+cafe-api = [
+    "fastapi>=0.100.0",
+    "uvicorn[standard]>=0.22.0",
+    "pydantic>=2.0.0",
+    "boto3>=1.28.0",
+    "mangum>=0.17.0",
+    "numpy>=1.24.0",
+    "geopy>=2.4.0",
+    "googlemaps>=4.10.0",
+]
+# Docker / local: services/image (FastAPI + S3 + thumbnails)
+image-api = [
+    "fastapi>=0.100.0",
+    "uvicorn[standard]>=0.22.0",
+    "mangum>=0.17.0",
+    "pydantic>=2.0.0",
+    "boto3>=1.28.0",
+    "Pillow>=10.0.0",
+    "pillow-heif>=0.16.0",
+]
+# AWS Lambda container: services/image (Mangum + FastAPI; no uvicorn — API Gateway invokes the handler)
+lambda-image = [
+    "fastapi>=0.100.0",
+    "mangum>=0.17.0",
+    "pydantic>=2.0.0",
+    "boto3>=1.28.0",
+    "Pillow>=10.0.0",
+    "pillow-heif>=0.16.0",
+]
+# AWS Lambda container: services/cafe (FastAPI + Mangum + DynamoDB; no uvicorn)
+lambda-cafe = [
+    "fastapi>=0.100.0",
+    "mangum>=0.17.0",
+    "pydantic>=2.0.0",
+    "boto3>=1.28.0",
+    "numpy>=1.24.0",
+    "geopy>=2.4.0",
+    "googlemaps>=4.10.0",
+]
+# AWS Lambda container: services/auth (JWT only)
+lambda-auth = [
+    "PyJWT>=2.8.0",
+]
+# Optional: pytest for tests/ (uv run --group tests)
+tests = [
+    "pytest>=8.0.0",
+    "httpx>=0.27.0",
+]
+# Optional: manual zip layer for `legacy/lambda/` (pip install --target package/python)
+function-legacy = [
+    "requests>=2.31.0",
+    "python-dotenv>=1.2.1",
+    "boto3>=1.28.0",
+    "Pillow>=11.1.0",
+    "geopy>=2.4.0",
+    "numpy>=1.24.0",
+    "googlemaps>=4.10.0",
+]

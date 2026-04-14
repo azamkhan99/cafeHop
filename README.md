@@ -1,113 +1,68 @@
 # CafeHop
 
-A serverless application for managing and viewing cafe photos with AWS Lambda and S3 integration. The project includes authentication, S3 presigned URL generation for photo uploads, and integration with Google Maps API for cafe location data.
+Serverless cafe photos: static gallery on GitHub Pages (`web/`), S3 uploads, optional **DynamoDB** cafe list, and small **Lambda** APIs (auth JWT, image presign/thumbnails, legacy code under `legacy/lambda/`).
 
-## Project Structure
+## Layout
 
 ```
 cafeHop/
-├── function/
-│   ├── generate_s3_url_lambda_function.py  # Lambda function to generate S3 presigned URLs
-│   ├── simple_auth_lambda_function.py      # JWT-based authentication Lambda function
-│   └── requirements.txt                    # Python dependencies for Lambda functions
-├── template.yml                            # AWS SAM template for deployment
-├── 1-create-bucket.sh                      # Script to create S3 bucket for deployment artifacts
-├── 2-build-layer.sh                        # Script to build Lambda layer with dependencies
-├── 3-deploy.sh                             # Script to package and deploy the application
-├── 4-invoke.sh                             # Script to test/invoke Lambda functions
-├── 5-cleanup.sh                            # Script to clean up AWS resources
-├── index.html                              # Main gallery page for viewing cafe photos
-├── add.html                                # Page for adding new cafe photos
-├── map.html                                # Interactive map view of cafes
-└── requirements.txt                        # Local development dependencies
+├── web/                 # Static site: index.html, map.html, add.html, api-config*.js
+├── legacy/lambda/       # Legacy monolith Lambdas + utils (presign, elo, sharecard, …)
+├── assets/templates/    # SVG templates (e.g. receipt cards for sharecard flow)
+├── data/
+│   ├── gtfs_subway/     # Raw GTFS excerpts (optional / offline use)
+│   └── cafes.sample.json # Example cafe list shape (real data lives in S3 / DynamoDB)
+├── terraform/           # AWS: auth + optional image + optional cafe Lambdas, DynamoDB cafes
+├── localstack.env.example # Template → copy to gitignored localstack/.env (see docs/localstack.md)
+├── scripts/             # docker_push_lambda_*.sh, localstack_setup_resources.sh, dev_local.sh, …
+├── services/
+│   ├── auth/            # uploadAuth container (JWT)
+│   ├── image/           # presigned-url + process (FastAPI + Mangum)
+│   └── cafe/            # FastAPI cafe API (Docker / deploy separately if used)
+├── pyproject.toml       # uv + [dependency-groups]
+└── docker-compose.yml   # Local cafe + image + LocalStack; static HTTP root is ./web
 ```
 
-## Features
+**GitHub Pages:** Built-in “deploy from branch” only supports **`/`** or **`/docs`**, not **`/web`**. Options: (1) add a small Action that uploads **`web/`** as the site root (e.g. to `gh-pages`), (2) set Pages to **`/docs`** and move static assets into `docs/` (keep Terraform docs elsewhere or rename), or (3) keep a separate publishing step that copies `web/*` to the branch root you use for Pages.
 
-- **Photo Upload**: Generate presigned S3 URLs for secure photo uploads
-- **Authentication**: Simple JWT-based authentication for protected endpoints
-- **Image Metadata**: Extract GPS coordinates from image EXIF data
-- **CORS Support**: Configured for GitHub Pages deployment
+## Prerequisites
 
-## Lambda Functions
+- [uv](https://docs.astral.sh/uv/) (see `.python-version`)
+- AWS CLI + Terraform for cloud deploys
+- Docker for Lambda images and `docker compose`
 
-### 1. Generate S3 URL Function (`generate_s3_url_lambda_function.py`)
-- Generates presigned S3 URLs for uploading cafe photos
-- Stores metadata (cafe name, rating, notes, coordinates) with images
-- Handles CORS for cross-origin requests
-- Generates filenames based on cafe name and rating
+## AWS deploy (Terraform + ECR)
 
-### 2. Simple Auth Function (`simple_auth_lambda_function.py`)
-- Validates password and generates JWT tokens
-- Tokens are valid for 5 minutes
-- Simple password-based authentication
+1. `cd terraform && terraform init && terraform apply` (set `TF_VAR_jwt_secret`; see `docs/terraform-import-auth.md` if importing).
 
-### 3. Utils Module (`utils.py`)
-Utility functions for:
-- Image EXIF data extraction (GPS coordinates)
+2. **Auth image:** `./scripts/docker_push_lambda_auth.sh <tag>` then `terraform apply -var="auth_lambda_image_tag=<tag>"`.
 
-## Setup
+3. **Image API (optional):** `TF_VAR_enable_image_terraform=true`, then follow `docs/terraform-import-image.md`.
 
-### Prerequisites
+4. Put outputs into **`web/api-config.js`** (`authUrl`, `imageUrl`, …).
 
-- AWS CLI configured with appropriate credentials
-- AWS SAM CLI installed
-- Python 3.10
+## Local dev
 
-### Deployment Steps
-
-1. **Create S3 Bucket for Artifacts**:
-   ```sh
-   ./1-create-bucket.sh
-   ```
-
-2. **Build Lambda Layer**:
-   ```sh
-   ./2-build-layer.sh
-   ```
-   This installs dependencies from `function/requirements.txt` into the `package/` directory.
-
-3. **Deploy Application**:
-   ```sh
-   ./3-deploy.sh
-   ```
-   This packages and deploys the application using AWS SAM.
-
-4. **Invoke/Test Functions** (optional):
-   ```sh
-   ./4-invoke.sh
-   ```
-
-5. **Cleanup** (when done):
-   ```sh
-   ./5-cleanup.sh
-   ```
-
-### Environment Variables
-
-Set the following environment variables in your Lambda function configuration:
-
-- `BUCKET_NAME`: S3 bucket name for storing cafe photos
-- `JWT_SECRET`: Secret key for JWT token signing (defaults to "supersecret" if not set)
-
-### Local Development
-
-For local development, install dependencies:
-
-```sh
-pip install -r requirements.txt
+```bash
+docker compose up --build
 ```
 
-Note: The `requirements.txt` in the root includes additional dependencies for local development (like Streamlit), while `function/requirements.txt` contains only the Lambda function dependencies.
+Open **http://127.0.0.1:3000/add.html** (static root is `web/`). APIs: cafe `8000`, image `8002`, LocalStack `4566`. For compose, point **`web/api-config.js`** at those URLs and the LocalStack bucket (see `docker-compose.yml` comments), or keep a gitignored local copy. LocalStack: **`docs/localstack.md`** (create **`localstack/.env`** from **`localstack.env.example`**; that folder is gitignored).
 
-## Usage
+## Python env (repo root)
 
-### Frontend
+```bash
+uv sync
+uv run python -m pytest
+```
 
-The HTML files (`index.html`, `add.html`, `map.html`) provide a web interface for:
-- Viewing uploaded cafe photos
-- Adding new cafe entries with photos
-- Viewing cafes on an interactive map
+Run `uv lock` after dependency changes.
 
-These files are designed to be served via GitHub Pages and communicate with the deployed Lambda functions.
+## Legacy zip layers
 
+The **`function-legacy`** dependency group is for a **manual** `pip install --target package/python` zip layer. **Cafe API** on AWS: `scripts/docker_push_lambda_cafe.sh` + `module.cafe` (see `docs/terraform-import-cafe.md`).
+
+## Docs
+
+- `docs/terraform-import-auth.md`, `docs/terraform-import-image.md`, `docs/terraform-import-cafe.md`
+- `docs/localstack.md` — LocalStack + `localstack/.env` (from `localstack.env.example`)

@@ -1,0 +1,23 @@
+# AWS Lambda container for the cafe FastAPI app (Mangum).
+# Build from repo root:
+#   docker build --platform linux/amd64 -f services/cafe/Dockerfile.lambda -t <account>.dkr.ecr.<region>.amazonaws.com/<repo>:<tag> .
+FROM public.ecr.aws/lambda/python:3.12
+
+ENV PIP_NO_CACHE_DIR=1
+
+RUN pip install --no-cache-dir uv
+
+COPY pyproject.toml uv.lock /tmp/dep/
+WORKDIR /tmp/dep
+RUN uv export --frozen --only-group lambda-cafe -o /tmp/req.txt \
+    && uv pip install --system --no-cache -r /tmp/req.txt \
+    && pip uninstall -y uv \
+    && rm -rf /tmp/dep /tmp/req.txt
+
+WORKDIR ${LAMBDA_TASK_ROOT}
+COPY services/cafe/*.py ./
+COPY services/cafe/gtfs_precomputed.json ./gtfs_precomputed.json
+# Citibike enrichment (citibike_stations.py default path: same directory as this Dockerfile’s copies).
+COPY station_information_rel.json ./station_information_rel.json
+
+CMD ["main.lambda_handler"]

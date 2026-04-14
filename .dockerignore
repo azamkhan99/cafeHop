@@ -1,0 +1,11 @@
+.git
+.venv
+**/__pycache__
+*.pyc
+.terraform
+terraform/.terraform
+terraform/build
+terminals
+.cursor
+*.ipynb
+node_modules

@@ -1,11 +1,21 @@
 /.env
+# Local LocalStack config (create from localstack.env.example)
+localstack/
 /package/
 out.*
 bucket-name.txt
+.venv/
 __pycache__/
 *.pyc
 *.ipynb
 update-s3-cors.sh
 nyc_subway.json
-function/build_cafes_json.py
-function/batch_resize_and_thumbnail.py
+legacy/lambda/build_cafes_json.py
+legacy/lambda/batch_resize_and_thumbnail.py
+terraform/build/
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/.terraform.lock.hcl
+
+/docs/
