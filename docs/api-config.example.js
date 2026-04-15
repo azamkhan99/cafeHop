@@ -1,4 +1,4 @@
-// Copy to api-config.js for local development (api-config.js is gitignored).
+// Copy to api-config.js or edit api-config.js in docs/ (tracked for GitHub Pages).
 
 window.CafeHopConfig = {
   authUrl: "",

@@ -19,5 +19,5 @@ terraform/*.tfstate.*
 terraform/.terraform.lock.hcl
 
 
-/docs/api-config.js
+
 /docsu/
