@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Cup Schema - Azam's NYC Coffee Dataset</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/exif-js@2.3.0/exif.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #fafafa;
+            padding: 0;
+            margin: 0;
+            color: rgba(0, 0, 0, 0.87);
+        }
+
+        .header {
+            text-align: center;
+            width: 100%;
+            padding: 2.25rem 2rem;
+            background: #000000;
+            /* match gallery page header */
+            border-radius: 0;
+            color: white;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.55rem;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .header h1 {
+            font-family: 'Anton', sans-serif;
+            font-size: 4rem;
+            font-weight: 400;
+            margin: 0;
+            letter-spacing: 0.02em;
+            color: white;
+            position: relative;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            gap: 0rem;
+        }
+
+        .header-title-icon {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+        }
+
+        .header .subtitle {
+            font-family: 'Courier New', 'Courier', 'Monaco', 'Menlo', monospace;
+            font-size: 0.875rem;
+            font-weight: 400;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 0.15rem;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 0.35rem;
+            margin-bottom: 0.35rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .nav-button {
+            padding: 0.625rem 1.5rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border: none;
+            border-radius: 2px;
+            background-color: rgba(255, 255, 255, 0.12);
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 0.0892857143em;
+        }
+
+        .nav-button:hover {
+            background-color: rgba(255, 255, 255, 0.16);
+        }
+
+        .nav-button.active {
+            background-color: rgba(255, 255, 255, 0.24);
+        }
+
+        .map-container {
+            height: calc(100vh - 200px);
+            position: relative;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            z-index: 1000;
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 0.5rem;
+            border-radius: 6px;
+            z-index: 1000;
+            font-size: 0.75rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.25rem;
+        }
+
+        .legend-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .legend-icon {
+            font-size: 14px;
+            margin-right: 0.4rem;
+            flex-shrink: 0;
+        }
+
+        /* Override Leaflet's default popup styles using custom class for better specificity */
+        .custom-popup-wrapper.leaflet-popup-content-wrapper {
+            padding: 0;
+            border-radius: 4px;
+        }
+
+        .custom-popup-wrapper .leaflet-popup-content {
+            margin: 0;
+            padding: 0;
+        }
+
+        .custom-popup {
+            text-align: center;
+            background: white;
+            padding: 1.2rem 0.1rem 0.1rem 0.1rem;
+            margin: 0;
+            min-width: 100px;
+            max-width: 120px;
+
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .popup-image {
+            width: calc(100% - 0.3rem);
+            height: 70px;
+            object-fit: cover;
+            border-radius: 0;
+            margin: 0 auto 0.2rem auto;
+            display: block;
+            box-shadow: none;
+            filter: contrast(1.05) saturate(1.05);
+        }
+
+        .popup-name {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #000000;
+            padding: 0;
+            margin: 0 0 0.2rem 0;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .popup-stars {
+            color: #000000;
+            font-size: 0.7rem;
+            padding: 0;
+            margin: 0;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 2rem 1.5rem;
+            }
+
+            .header h1 {
+                font-size: 2.25rem;
+            }
+
+            .header h1::after {
+                margin-left: 0.5rem;
+                font-size: 1.75rem;
+            }
+
+            .header .subtitle {
+                font-size: 0.9rem;
+                letter-spacing: 0.1em;
+            }
+
+            .nav-buttons {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .nav-button {
+                padding: 0.55rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .map-container {
+                height: calc(100vh - 250px);
+            }
+
+            .legend {
+                bottom: 10px;
+                right: 10px;
+                padding: 0.4rem;
+                font-size: 0.7rem;
+            }
+
+            .legend-icon {
+                font-size: 12px;
+                margin-right: 0.3rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>
+                The Cup Schema
+                <img src="coffeecup2.png" alt="Coffee cup" class="header-title-icon">
+            </h1>
+            <p class="subtitle">Azam's NYC Coffee Dataset</p>
+        </div>
+        <div class="nav-buttons">
+            <a href="index.html" class="nav-button">Gallery View</a>
+            <a href="add.html" class="nav-button">Add Café</a>
+        </div>
+    </div>
+
+    <div class="map-container">
+        <div class="loading" id="loading">Loading map and fetching GPS coordinates from S3 metadata...</div>
+        <div id="map"></div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <i class="fas fa-coffee legend-icon" style="color: #48bb78;"></i>
+                <span>5★</span>
+            </div>
+            <div class="legend-item">
+                <i class="fas fa-coffee legend-icon" style="color: #84cc16;"></i>
+                <span>4★</span>
+            </div>
+            <div class="legend-item">
+                <i class="fas fa-coffee legend-icon" style="color: #fbbf24;"></i>
+                <span>3★</span>
+            </div>
+            <div class="legend-item">
+                <i class="fas fa-coffee legend-icon" style="color: #f97316;"></i>
+                <span>2★</span>
+            </div>
+            <div class="legend-item">
+                <i class="fas fa-coffee legend-icon" style="color: #ef4444;"></i>
+                <span>1★</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="api-config.js"></script>
+    <script>
+        const C = window.CafeHopConfig || {};
+        const BUCKET_URL = (C.bucketUrl || '').replace(/\/$/, '');
+        const CAFES_JSON_URL = C.cafesJsonUrl || (BUCKET_URL ? BUCKET_URL + '/cafes.json' : '');
+        const CAFE_API_URL = (C.cafeUrl || '').replace(/\/$/, '');
+        const USE_CAFE_API = Boolean(CAFE_API_URL && !CAFE_API_URL.includes('YOUR_CAFE'));
+        const CACHE_KEY = 'cafeMapDataDdb';
+        const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+
+        // NYC coordinates (centered on Manhattan)
+        const NYC_CENTER = [40.7589, -73.9851];
+
+        // Cache management functions
+        function getCachedData() {
+            try {
+                const cached = localStorage.getItem(CACHE_KEY);
+                if (!cached) return null;
+
+                const data = JSON.parse(cached);
+                const now = Date.now();
+
+                // Check if cache is still valid
+                if (now - data.timestamp < CACHE_DURATION) {
+                    return data.cafes;
+                } else {
+                    // Cache expired
+                    localStorage.removeItem(CACHE_KEY);
+                    return null;
+                }
+            } catch (e) {
+                console.warn('Error reading cache:', e);
+                return null;
+            }
+        }
+
+        function setCachedData(cafes) {
+            try {
+                const data = {
+                    timestamp: Date.now(),
+                    cafes: cafes
+                };
+                localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+            } catch (e) {
+                console.warn('Error saving cache:', e);
+            }
+        }
+
+        function escapeHtml(text) {
+            if (text == null || text === '') return '';
+            const div = document.createElement('div');
+            div.textContent = String(text);
+            return div.innerHTML;
+        }
+
+        function safeHttpUrl(url) {
+            const s = String(url || '').trim();
+            if (!s) return '';
+            const low = s.slice(0, 8).toLowerCase();
+            if (low.startsWith('https://') || low.startsWith('http://')) return s;
+            return '';
+        }
+
+        function safeLeafletIconColor(hex) {
+            return /^#[0-9a-fA-F]{6}$/.test(String(hex || '')) ? hex : '#a0aec0';
+        }
+
+        function cafeFromDynamoApiRecord(cafe) {
+            const key = cafe.s3_key || cafe.s3Key || '';
+            const imageUrl = (cafe.image_url || cafe.imageUrl || '').trim()
+                || (BUCKET_URL && key ? BUCKET_URL + '/' + key : '');
+            const mapThumb = BUCKET_URL && key ? BUCKET_URL + '/mapThumbnails/' + key : '';
+            const lat = cafe.latitude != null ? Number(cafe.latitude) : null;
+            const lon = cafe.longitude != null ? Number(cafe.longitude) : null;
+            const elo = cafe.elo_star_rating != null ? Number(cafe.elo_star_rating)
+                : (cafe.eloStarRating != null ? Number(cafe.eloStarRating) : 0);
+            return {
+                key,
+                name: (cafe.name || '').trim() || key.replace(/\.[^/.]+$/, ''),
+                imageUrl,
+                thumbnailUrl: mapThumb || imageUrl,
+                mapThumbnailUrl: mapThumb || imageUrl,
+                latitude: lat,
+                longitude: lon,
+                eloStarRating: elo
+            };
+        }
+
+        function createMarkerFromCachedData(cafe) {
+            const iconColor = safeLeafletIconColor(getIconColorByStars(cafe.stars));
+            const customIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: `<i class="fas fa-coffee" style="font-size: 18px; color: ${iconColor};"></i>`,
+                iconSize: [18, 18],
+                iconAnchor: [9, 18]
+            });
+
+            const starsHtml = `<div class="popup-stars">${generateStars(cafe.stars)}</div>`;
+            // Use map-specific thumbnail for faster loading, fallback to gallery thumbnail, then full image
+            const imageSrcRaw = cafe.mapThumbnailUrl || cafe.thumbnailUrl || cafe.imageUrl;
+            const imageSrc = safeHttpUrl(imageSrcRaw);
+
+            const popupContent = `
+                <div class="custom-popup">
+                    <img src="${escapeHtml(imageSrc)}" alt="${escapeHtml(cafe.name)}" class="popup-image">
+                    <div class="popup-name">${escapeHtml(cafe.name)}</div>
+                    ${starsHtml}
+                </div>
+            `;
+
+            return {
+                coordinates: cafe.coordinates,
+                icon: customIcon,
+                popup: popupContent
+            };
+        }
+
+
+
+
+        // Function to generate star rating HTML (supports half ratings with ½ symbol)
+        function generateStars(count) {
+            if (count === null || count === undefined || count === 0) {
+                return '';
+            }
+
+            const fullStars = Math.floor(count);
+            const hasHalf = count % 1 >= 0.5;
+
+            let result = '★'.repeat(fullStars);
+            if (hasHalf) {
+                result += '½';
+            }
+
+            return result;
+        }
+
+        // Function to get icon color based on star rating (handles decimal values by rounding)
+        function getIconColorByStars(stars) {
+            // Round to nearest integer for color mapping
+            const roundedStars = Math.round(stars);
+            const colorMap = {
+                0: '#a0aec0',  // gray
+                1: '#ef4444',  // red
+                2: '#f97316',  // orange
+                3: '#fbbf24',  // yellow
+                4: '#84cc16',  // light green
+                5: '#48bb78'   // dark green
+            };
+            return colorMap[roundedStars] || colorMap[0];
+        }
+
+
+
+        // Function to extract GPS coordinates from image EXIF data
+        function getGPSFromImage(imageUrl) {
+            return new Promise((resolve) => {
+                const safeSrc = safeHttpUrl(imageUrl);
+                if (!safeSrc) {
+                    resolve(null);
+                    return;
+                }
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+
+                img.onload = function () {
+                    EXIF.getData(img, function () {
+                        const lat = EXIF.getTag(this, "GPSLatitude");
+                        const latRef = EXIF.getTag(this, "GPSLatitudeRef");
+                        const lon = EXIF.getTag(this, "GPSLongitude");
+                        const lonRef = EXIF.getTag(this, "GPSLongitudeRef");
+
+                        if (lat && lon && latRef && lonRef) {
+                            // Convert DMS to decimal degrees
+                            const latDecimal = convertDMSToDD(lat, latRef);
+                            const lonDecimal = convertDMSToDD(lon, lonRef);
+
+                            console.log(`Found GPS in EXIF: ${latDecimal}, ${lonDecimal} for ${imageUrl}`);
+                            resolve([latDecimal, lonDecimal]);
+                        } else {
+                            console.log(`No GPS data found in EXIF for ${imageUrl}`);
+                            resolve(null);
+                        }
+                    });
+                };
+
+                img.onerror = function () {
+                    console.warn('Failed to load image for EXIF extraction');
+                    resolve(null);
+                };
+
+                img.src = safeSrc;
+            });
+        }
+
+        // Function to convert DMS (Degrees, Minutes, Seconds) to Decimal Degrees
+        function convertDMSToDD(dms, ref) {
+            let dd = dms[0] + dms[1] / 60 + dms[2] / (60 * 60);
+            if (ref === "S" || ref === "W") {
+                dd = dd * -1;
+            }
+            return dd;
+        }
+
+
+        async function loadMap() {
+            // Initialize map
+            const map = L.map('map').setView(NYC_CENTER, 13);
+
+            // Add tile layer - using CartoDB Positron for a clean, modern aesthetic
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(map);
+
+            try {
+                // Check cache first
+                const cachedCafes = getCachedData();
+                if (cachedCafes && cachedCafes.length > 0) {
+                    console.log('Loading from cache...');
+                    // Hide loading message
+                    document.getElementById('loading').style.display = 'none';
+
+                    // Add markers from cache immediately
+                    cachedCafes.forEach(cafe => {
+                        const markerData = createMarkerFromCachedData(cafe);
+                        const popupOptions = {
+                            className: 'custom-popup-wrapper',
+                            maxWidth: 120,
+                            minWidth: 100
+                        };
+                        L.marker(markerData.coordinates, { icon: markerData.icon })
+                            .addTo(map)
+                            .bindPopup(markerData.popup, popupOptions);
+                    });
+
+                    // Fetch fresh data in background and update cache
+                    fetchAndUpdateMap(map, true);
+                } else {
+                    // No cache, fetch fresh data
+                    await fetchAndUpdateMap(map, false);
+                }
+
+            } catch (error) {
+                console.error('Error loading map data:', error);
+                document.getElementById('loading').innerHTML = 'Error loading map data. Please try again later.';
+            }
+        }
+
+        async function fetchAndUpdateMap(map, backgroundUpdate = false) {
+            try {
+                if (!backgroundUpdate) {
+                    // Hide loading message only if not background update
+                    document.getElementById('loading').style.display = 'none';
+                }
+
+                let cafesFromJson = [];
+                if (USE_CAFE_API) {
+                    const response = await fetch(CAFE_API_URL + '/cafes?limit=500');
+                    if (!response.ok) {
+                        throw new Error(`Cafe API failed: ${response.status}`);
+                    }
+                    const jsonData = await response.json();
+                    cafesFromJson = (jsonData.cafes || []).map(cafeFromDynamoApiRecord);
+                } else {
+                    if (!CAFES_JSON_URL) {
+                        throw new Error('Configure CafeHopConfig.cafeUrl or bucketUrl');
+                    }
+                    const response = await fetch(CAFES_JSON_URL);
+                    if (!response.ok) {
+                        throw new Error(`Failed to fetch cafes.json: ${response.status}`);
+                    }
+                    const jsonData = await response.json();
+                    cafesFromJson = jsonData.cafes || [];
+                }
+
+                // Process cafes and add markers
+                const cafePromises = cafesFromJson.map(async (cafe) => {
+                    // Skip if no GPS coordinates
+                    let coordinates = null;
+                    if (cafe.latitude && cafe.longitude) {
+                        coordinates = [cafe.latitude, cafe.longitude];
+                    } else {
+                        // Try EXIF GPS as fallback
+                        const imageUrl = cafe.imageUrl || `${BUCKET_URL}/${cafe.key}`;
+                        coordinates = await getGPSFromImage(imageUrl);
+                        if (!coordinates) {
+                            console.log(`Skipping ${cafe.name} - no GPS coordinates found`);
+                            return null;
+                        }
+                    }
+
+                    const stars = cafe.eloStarRating || 0;
+                    const imageUrl = cafe.imageUrl || `${BUCKET_URL}/${cafe.key}`;
+                    // Use map-specific thumbnail for faster loading, fallback to gallery thumbnail, then full image
+                    const imageSrcRaw = cafe.mapThumbnailUrl || cafe.thumbnailUrl || imageUrl;
+                    const imageSrc = safeHttpUrl(imageSrcRaw);
+
+                    // Create custom icon based on star rating - using Font Awesome coffee icon
+                    const iconColor = safeLeafletIconColor(getIconColorByStars(stars));
+                    const customIcon = L.divIcon({
+                        className: 'custom-div-icon',
+                        html: `<i class="fas fa-coffee" style="font-size: 18px; color: ${iconColor};"></i>`,
+                        iconSize: [18, 18],
+                        iconAnchor: [9, 18]
+                    });
+
+                    // Create popup content
+                    const starsHtml = `<div class="popup-stars">${generateStars(stars)}</div>`;
+
+                    const popupContent = `
+                        <div class="custom-popup">
+                            <img src="${escapeHtml(imageSrc)}" alt="${escapeHtml(cafe.name)}" class="popup-image">
+                            <div class="popup-name">${escapeHtml(cafe.name)}</div>
+                            ${starsHtml}
+                        </div>
+                    `;
+
+                    return {
+                        coordinates,
+                        icon: customIcon,
+                        popup: popupContent,
+                        // Also store raw data for caching
+                        name: cafe.name,
+                        stars: stars,
+                        imageUrl: imageUrl,
+                        thumbnailUrl: cafe.thumbnailUrl || imageUrl,
+                        mapThumbnailUrl: cafe.mapThumbnailUrl || cafe.thumbnailUrl || imageUrl,
+                        key: cafe.key
+                    };
+                });
+
+                // Wait for all EXIF extraction requests to complete (if any)
+                const cafeData = await Promise.all(cafePromises);
+                const validCafes = cafeData.filter(cafe => cafe !== null);
+
+                // Cache the data (store minimal data needed for reconstruction)
+                const cacheData = validCafes.map(cafe => ({
+                    coordinates: cafe.coordinates,
+                    name: cafe.name,
+                    stars: cafe.stars,
+                    imageUrl: cafe.imageUrl,
+                    thumbnailUrl: cafe.thumbnailUrl || cafe.imageUrl,
+                    mapThumbnailUrl: cafe.mapThumbnailUrl || cafe.thumbnailUrl || cafe.imageUrl,
+                    key: cafe.key
+                }));
+                setCachedData(cacheData);
+
+                // Popup options to control styling
+                const popupOptions = {
+                    className: 'custom-popup-wrapper',
+                    maxWidth: 120,
+                    minWidth: 100
+                };
+
+                if (!backgroundUpdate) {
+                    // Add markers to map (only if not background update)
+                    validCafes.forEach(cafe => {
+                        L.marker(cafe.coordinates, { icon: cafe.icon })
+                            .addTo(map)
+                            .bindPopup(cafe.popup, popupOptions);
+                    });
+                } else {
+                    console.log('Background update completed, cache refreshed');
+                    // Clear existing markers and re-add with fresh data
+                    map.eachLayer(layer => {
+                        if (layer instanceof L.Marker) {
+                            map.removeLayer(layer);
+                        }
+                    });
+                    validCafes.forEach(cafe => {
+                        L.marker(cafe.coordinates, { icon: cafe.icon })
+                            .addTo(map)
+                            .bindPopup(cafe.popup, popupOptions);
+                    });
+                }
+
+            } catch (error) {
+                console.error('Error fetching map data:', error);
+                if (!backgroundUpdate) {
+                    document.getElementById('loading').innerHTML = 'Error loading map data. Please try again later.';
+                }
+            }
+        }
+
+        // Load map when page loads
+        document.addEventListener('DOMContentLoaded', loadMap);
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Cup Schema</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #ffffff;
+            padding: 0;
+            margin: 0;
+            color: rgba(0, 0, 0, 0.87);
+            user-select: none;
+        }
+
+        .header {
+            text-align: center;
+            width: 100%;
+            padding: 2.25rem 2rem;
+            background: #000000;
+            border-radius: 0;
+            color: white;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.55rem;
+        }
+
+        .content-wrapper {
+            padding: 0;
+            margin-top: 0;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .header h1 {
+            font-family: 'Anton', sans-serif;
+            user-select: none !important;
+            /* Prevent text selection globally */
+            -webkit-user-select: none !important;
+            /* For Safari and iOS */
+            font-size: 4rem;
+            font-weight: 400;
+            margin: 0;
+            letter-spacing: 0.02em;
+            color: white;
+            position: relative;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            gap: 0rem;
+        }
+
+        .header-title-icon {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+        }
+
+        .header .subtitle {
+            font-family: 'Courier New', 'Courier', 'Monaco', 'Menlo', monospace;
+            user-select: none !important;
+            /* Prevent text selection globally */
+            -webkit-user-select: none !important;
+            /* For Safari and iOS */
+            font-size: 0.875rem;
+            font-weight: 400;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 0.15rem;
+        }
+
+        .nav-buttons {
+            display: flex;
+            user-select: none !important;
+            /* Prevent text selection globally */
+            -webkit-user-select: none !important;
+            /* For Safari and iOS */
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 0.35rem;
+            margin-bottom: 0.35rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .nav-button {
+            padding: 0.625rem 1.5rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border: none;
+            border-radius: 2px;
+            background-color: rgba(255, 255, 255, 0.12);
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 0.0892857143em;
+        }
+
+        .nav-button:hover {
+            background-color: rgba(255, 255, 255, 0.16);
+        }
+
+        .nav-button.active {
+            background-color: rgba(255, 255, 255, 0.24);
+        }
+
+        .toggle-container {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            gap: 1rem;
+            padding: 0 1.5rem;
+            margin: 1.25rem 0 0 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .sort-toggle {
+            position: absolute;
+            user-select: none !important;
+            /* Prevent text selection globally */
+            -webkit-user-select: none !important;
+            /* For Safari and iOS */
+            top: 0.7rem;
+            right: 0.7rem;
+            padding: 0.25rem 0.25rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 500;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            background-color: rgba(0, 0, 0, 0.4);
+            color: white;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.09em;
+            z-index: 2;
+        }
+
+        .sort-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .filter-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.85rem;
+            color: rgba(0, 0, 0, 0.85);
+            letter-spacing: 0.08em;
+        }
+
+        .filter-label {
+            opacity: 0.85;
+            user-select: none !important;
+            /* Prevent text selection globally */
+            -webkit-user-select: none !important;
+            /* For Safari and iOS */
+        }
+
+        .filter-select-wrapper {
+            display: inline-flex;
+            align-items: center;
+            position: relative;
+            user-select: none !important;
+            /* Prevent text selection globally */
+            -webkit-user-select: none !important;
+            /* For Safari and iOS */
+        }
+
+        .filter-select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            padding: 0.1rem 0.9rem 0.05rem 0.35rem;
+            border-radius: 0;
+            border: none;
+            border-bottom: 0.5px solid rgba(0, 0, 0, 0.4);
+            background-color: transparent;
+            color: inherit;
+            cursor: pointer;
+            outline: none;
+            opacity: 0.85;
+        }
+
+        .filter-arrow {
+            font-size: 0.8rem;
+            user-select: none !important;
+            /* Prevent text selection globally */
+            -webkit-user-select: none !important;
+            /* For Safari and iOS */
+            opacity: 0.7;
+            position: absolute;
+            right: 0.1rem;
+            pointer-events: none;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            /* Use the same spacing between cards and at the edges */
+            gap: 1.5rem;
+            padding: 1.5rem;
+            margin-top: 0;
+        }
+
+        .cafe-card {
+            background: white;
+            border-radius: 0;
+            overflow: hidden;
+            transition: transform 0.2s ease;
+            position: relative;
+            cursor: default;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .cafe-image-container {
+            position: relative;
+            user-select: none !important;
+            /* Prevent text selection globally */
+            -webkit-user-select: none !important;
+            /* For Safari and iOS */
+            width: 100%;
+            height: 250px;
+            contain: layout style paint;
+        }
+
+        .cafe-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            filter: contrast(1.05) saturate(1.05);
+            transition: filter 0.3s ease;
+        }
+
+
+        .stars-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            color: gold;
+            font-size: 2rem;
+            gap: 0.5rem;
+            padding: 1rem;
+            will-change: opacity;
+            backface-visibility: hidden;
+            transform: translateZ(0);
+        }
+
+        .cups-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            contain: layout style paint;
+        }
+
+        .cup-icon {
+            width: 2rem;
+            height: 2rem;
+            display: inline-block;
+            flex-shrink: 0;
+            position: relative;
+            will-change: transform;
+        }
+
+        .cup-icon svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .cup-icon.half {
+            overflow: hidden;
+        }
+
+        .cup-icon.half svg {
+            clip-path: inset(50% 0 0 0);
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+
+            /* Hover only on devices that support it (desktop) */
+            .cafe-image-container:hover .stars-overlay {
+                opacity: 1;
+            }
+
+            /* NEW: if you're over the share button, don't show overlay */
+            .cafe-image-container:has(.cafe-share-button:hover) .stars-overlay,
+            .cafe-image-container:has(.cafe-share-button:focus-visible) .stars-overlay,
+            .cafe-image-container:has(.cafe-share-button:active) .stars-overlay {
+                opacity: 0 !important;
+            }
+        }
+
+        .cafe-image-container.show-stars .stars-overlay {
+            opacity: 1;
+        }
+
+        .cafe-name {
+            user-select: none !important;
+            /* Prevent text selection globally */
+            -webkit-user-select: none !important;
+            /* For Safari and iOS */
+            padding: 0.6rem 0rem 0rem 0rem;
+            font-size: 1.4rem;
+            text-align: center;
+            color: #000000;
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: white;
+        }
+
+        .cafe-name.cafe-name-small {
+            font-size: 1.1rem;
+        }
+
+        .cafe-notes {
+            user-select: none !important;
+            /* Prevent text selection globally */
+            -webkit-user-select: none !important;
+            /* For Safari and iOS */
+            font-family: 'Dancing Script', 'Brush Script MT', cursive;
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.9);
+            text-align: center;
+            padding: 0.5rem 1rem 0 1rem;
+            font-style: italic;
+            line-height: 1.4;
+            max-width: 100%;
+            word-wrap: break-word;
+            will-change: contents;
+        }
+
+        .cafe-neighborhood {
+            user-select: none !important;
+            /* Prevent text selection globally */
+            -webkit-user-select: none !important;
+            /* For Safari and iOS */
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.78rem;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: rgba(0, 0, 0, 0.398);
+            text-align: center;
+            padding: 0 1rem 0 1rem;
+
+        }
+
+        /* .cafe-neighborhood::before {
+            content: "📍 ";
+            opacity: 0.9;
+        } */
+
+        .cafe-subway-icons {
+            position: absolute;
+            user-select: none !important;
+            /* Prevent text selection globally */
+            -webkit-user-select: none !important;
+            /* For Safari and iOS */
+            bottom: 0.5rem;
+            right: 0.5rem;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 0.25rem;
+            flex-wrap: wrap;
+            z-index: 2;
+        }
+
+        .cafe-place-type-icon {
+            position: absolute;
+            user-select: none !important;
+            /* Prevent text selection globally */
+            -webkit-user-select: none !important;
+            /* For Safari and iOS */
+            top: 0.5rem;
+            left: 0.5rem;
+            font-size: 24px;
+            z-index: 3;
+            line-height: 1;
+        }
+
+        .bike-info {
+            position: absolute;
+            bottom: 0.5rem;
+            left: 0.5rem;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            font-size: 0.85rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Space Grotesk', sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .cafe-share-button {
+            position: absolute;
+            user-select: none !important;
+            /* Prevent text selection globally */
+            -webkit-user-select: none !important;
+            /* For Safari and iOS */
+            top: 0.5rem;
+            right: 0.5rem;
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            flex-shrink: 0;
+            padding: 0;
+            text-decoration: none;
+            color: rgba(0, 0, 0, 0.85);
+            font-size: 14px;
+            z-index: 3;
+            touch-action: manipulation;
+        }
+
+        .cafe-share-button::before {
+            content: '';
+            position: absolute;
+            top: -11px;
+            /* Expand the hitbox */
+            left: -11px;
+            width: 44px;
+            /* Minimum recommended touch target size */
+            height: 44px;
+            /* Minimum recommended touch target size */
+            background: transparent;
+            /* Invisible hitbox */
+            z-index: -1;
+            /* Keep it behind the button */
+        }
+
+        .cafe-share-button:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: scale(1.05);
+        }
+
+        .cafe-share-button:active {
+            transform: scale(0.95);
+        }
+
+        .cafe-share-button svg {
+            width: 12px;
+            height: 12px;
+            fill: currentColor;
+        }
+
+        .cafe-share-button:active~.stars-overlay {
+            opacity: 0 !important;
+        }
+
+        .cafe-pin {
+            text-decoration: none !important;
+            color: black;
+            font-size: 0.78rem;
+            opacity: 0.8;
+            cursor: pointer;
+            transition: opacity 0.2s ease, transform 0.1s ease;
+        }
+
+        .cafe-pin:hover,
+        .cafe-pin:focus,
+        .cafe-pin:active {
+            text-decoration: none !important;
+            opacity: 0.8;
+            transform: scale(1.2);
+        }
+
+        .cafe-pin:active {
+            opacity: 0.9;
+            transform: scale(0.95);
+        }
+
+        .subway-icon {
+            width: 20px;
+            height: 20px;
+            display: inline-block;
+            flex-shrink: 0;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            padding: 2px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        .subway-icon svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            font-size: 1.25rem;
+            color: #4a5568;
+        }
+
+        .star {
+            color: gold;
+            font-size: 24px;
+            margin: 0 2px;
+        }
+
+        @media (max-width: 768px) {
+            .content-wrapper {
+                padding: 0;
+            }
+
+            .header {
+                padding: 2rem 1.5rem;
+                margin-bottom: 0;
+            }
+
+            .header h1 {
+                font-size: 2.25rem;
+            }
+
+            .header h1::after {
+                margin-left: 0.5rem;
+                font-size: 1.75rem;
+            }
+
+            .header .subtitle {
+                font-size: 0.9rem;
+                letter-spacing: 0.1em;
+            }
+
+            .nav-buttons {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .nav-button {
+                padding: 0.55rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .gallery {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 1rem;
+                padding: 1rem;
+                margin-top: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>
+                The Cup Schema
+                <img src="coffeecup2.png" alt="Coffee cup" class="header-title-icon">
+            </h1>
+            <p class="subtitle">Azam's NYC Coffee Dataset</p>
+        </div>
+        <div class="nav-buttons">
+            <a href="map.html" class="nav-button">Map View</a>
+            <a href="add.html" class="nav-button">Add Café</a>
+        </div>
+        <button class="sort-toggle" id="toggle-sort">RATING</button>
+    </div>
+
+    <div class="toggle-container">
+        <div class="filter-wrapper">
+            <span class="filter-label">Neighborhood:</span>
+            <div class="filter-select-wrapper">
+                <select id="neighborhood-filter" class="filter-select">
+                    <option value="all">All</option>
+                </select>
+                <span class="filter-arrow">▾</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-wrapper">
+        <div id="gallery" class="gallery">
+            <div class="loading">Loading café images...</div>
+        </div>
+    </div>
+
+    <!-- SVG Sprite for subway icons will be loaded here -->
+
+    <!-- Load SVG sprite for subway icons and coffee cup -->
+    <script>
+        // Load and inject the sprite sheets
+        (function () {
+            // Load subway icons sprite
+            fetch('all_icons.svg')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to load icons.svg');
+                    }
+                    return response.text();
+                })
+                .then(sprite => {
+                    // Create a container div and insert the sprite HTML
+                    const container = document.createElement('div');
+                    container.id = 'svg-sprite-container';
+                    container.style.display = 'none';
+                    container.innerHTML = sprite;
+                    document.body.insertBefore(container, document.body.firstChild);
+                })
+                .catch(err => {
+                    console.warn('Could not load icons.svg sprite. Make sure to run: npm run build-icons', err);
+                });
+
+            // Load coffee cup SVG and add to sprite
+            fetch('coffeecup2.svg')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to load coffeecup2.svg');
+                    }
+                    return response.text();
+                })
+                .then(svgContent => {
+                    // Extract the SVG content and add an ID to it
+                    const parser = new DOMParser();
+                    const svgDoc = parser.parseFromString(svgContent, 'image/svg+xml');
+                    const svgElement = svgDoc.querySelector('svg');
+
+                    if (svgElement) {
+                        // Get or set viewBox for proper scaling
+                        let viewBox = svgElement.getAttribute('viewBox');
+                        if (!viewBox) {
+                            const width = svgElement.getAttribute('width') || '1024';
+                            const height = svgElement.getAttribute('height') || '1024';
+                            viewBox = `0 0 ${width} ${height}`;
+                            svgElement.setAttribute('viewBox', viewBox);
+                        }
+
+                        // Set an ID for the sprite reference
+                        svgElement.id = 'coffeecup-icon';
+                        // Remove any existing width/height to make it scalable
+                        svgElement.removeAttribute('width');
+                        svgElement.removeAttribute('height');
+
+                        // Add to sprite container or create one if it doesn't exist
+                        let container = document.getElementById('svg-sprite-container');
+                        if (!container) {
+                            container = document.createElement('div');
+                            container.id = 'svg-sprite-container';
+                            container.style.display = 'none';
+                            document.body.insertBefore(container, document.body.firstChild);
+                        }
+                        container.appendChild(svgElement);
+                    }
+                })
+                .catch(err => {
+                    console.error('Error loading coffee cup SVG:', err);
+                });
+        })();
+    </script>
+
+    <script src="api-config.js"></script>
+    <script>
+        const C = window.CafeHopConfig || {};
+        const BUCKET_URL = (C.bucketUrl || '').replace(/\/$/, '');
+        const CAFES_JSON_URL = C.cafesJsonUrl || (BUCKET_URL ? BUCKET_URL + '/cafes.json' : '');
+        const CAFE_API_URL = (C.cafeUrl || '').replace(/\/$/, '');
+        const USE_CAFE_API = Boolean(CAFE_API_URL && !CAFE_API_URL.includes('YOUR_CAFE'));
+        const CACHE_KEY = 'cafeGalleryDataDdb';
+        const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes cache
+        let currentSort = 'rating'; // Default sort by ELO rating
+        let currentNeighborhoodFilter = 'all';
+        let cachedCafes = null; // Cache cafes in memory so sort/filter don't refetch
+        let cachedSortedCafes = null; // Cache sorted cafes to avoid re-sorting
+        let cachedFilteredCafes = null; // Cache filtered cafes
+
+        // Cache management functions
+        function getCachedData() {
+            try {
+                const cached = localStorage.getItem(CACHE_KEY);
+                if (!cached) return null;
+
+                const data = JSON.parse(cached);
+                const now = Date.now();
+
+                // Check if cache is still valid
+                if (now - data.timestamp < CACHE_DURATION) {
+                    return data.cafes;
+                } else {
+                    // Cache expired
+                    localStorage.removeItem(CACHE_KEY);
+                    return null;
+                }
+            } catch (e) {
+                console.warn('Error reading cache:', e);
+                return null;
+            }
+        }
+
+        function setCachedData(cafes) {
+            try {
+                const data = {
+                    timestamp: Date.now(),
+                    cafes: cafes
+                };
+                localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+            } catch (e) {
+                console.warn('Error saving cache:', e);
+            }
+        }
+
+
+        // Function to parse cafe name from filename
+        function parseCafeName(filename) {
+            // Remove file extension
+            return filename.replace(/\.[^/.]+$/, "");
+        }
+
+        /** Escape text for safe insertion into HTML (café data is untrusted once in Dynamo/S3). */
+        function escapeHtml(text) {
+            if (text == null || text === '') return '';
+            const div = document.createElement('div');
+            div.textContent = String(text);
+            return div.innerHTML;
+        }
+
+        /** Only allow http(s) URLs for img/src and links (blocks javascript:, data:, etc.). */
+        function safeHttpUrl(url) {
+            const s = String(url || '').trim();
+            if (!s) return '';
+            const low = s.slice(0, 8).toLowerCase();
+            if (low.startsWith('https://') || low.startsWith('http://')) return s;
+            return '';
+        }
+
+        /** SVG fragment id for <use href="#..."> — allow typical NYC line ids only. */
+        function safeSubwayFragmentId(route) {
+            const s = String(route || '').trim();
+            return /^[a-zA-Z0-9_.+@-]+$/.test(s) ? s : '';
+        }
+
+        /** Normalize GET /cafes (DynamoDB) JSON — snake_case from FastAPI — to gallery card shape. */
+        function cafeFromDynamoApiRecord(cafe) {
+            const key = cafe.s3_key || cafe.s3Key || '';
+            const imageUrl = (cafe.image_url || cafe.imageUrl || '').trim()
+                || (BUCKET_URL && key ? BUCKET_URL + '/' + key : '');
+            const mapThumb = BUCKET_URL && key ? BUCKET_URL + '/mapThumbnails/' + key : '';
+            const lat = cafe.latitude != null ? Number(cafe.latitude) : null;
+            const lon = cafe.longitude != null ? Number(cafe.longitude) : null;
+            const elo = cafe.elo_star_rating != null ? Number(cafe.elo_star_rating)
+                : (cafe.eloStarRating != null ? Number(cafe.eloStarRating) : null);
+            return {
+                key,
+                name: (cafe.name || '').trim() || parseCafeName(key),
+                imageUrl,
+                thumbnailUrl: mapThumb || imageUrl,
+                lastModified: cafe.last_modified || cafe.lastModified || '',
+                neighborhood: cafe.neighborhood || null,
+                subwayRoutes: cafe.subway_routes || cafe.subwayRoutes || null,
+                subwayStation: cafe.subway_station || cafe.subwayStation || null,
+                subwayDistanceM: cafe.subway_distance_m != null ? cafe.subway_distance_m : (cafe.subwayDistanceM ?? null),
+                latitude: lat,
+                longitude: lon,
+                eloStarRating: elo,
+                stars: elo != null ? elo : 0,
+                notes: cafe.notes || null,
+                google_maps_link: cafe.google_maps_link || null,
+                google_maps_place_type: cafe.google_maps_place_type || null,
+                shareCardPngUrl: cafe.share_card_png_url || cafe.shareCardPngUrl || '',
+                visited: true
+            };
+        }
+
+        // Function to generate star rating HTML using SVG sprite (supports half cups for .5 ratings)
+        function generateStars(count) {
+            if (count === null || count === undefined || count === 0) {
+                return '';
+            }
+
+            const fullCups = Math.floor(count);
+            const hasHalf = count % 1 >= 0.5;
+
+            let result = '';
+
+            // Generate full cups using SVG sprite
+            for (let i = 0; i < fullCups; i++) {
+                result += '<span class="cup-icon"><svg width="100%" height="100%" viewBox="0 0 1024 1024"><use href="#coffeecup-icon" xlink:href="#coffeecup-icon"></use></svg></span>';
+            }
+
+            // Generate half cup if needed
+            if (hasHalf) {
+                result += '<span class="cup-icon half"><svg width="100%" height="100%" viewBox="0 0 1024 1024"><use href="#coffeecup-icon" xlink:href="#coffeecup-icon"></use></svg></span>';
+            }
+
+            return result;
+        }
+
+        // Function to sort cafes by name
+        function sortByName(cafes) {
+            // Create a copy to avoid mutating the original array
+            return [...cafes].sort((a, b) => a.name.localeCompare(b.name));
+        }
+
+        // Function to sort cafes by ELO star rating (highest first)
+        function sortByEloRating(cafes) {
+            // Create a copy to avoid mutating the original array
+            return [...cafes].sort((a, b) => {
+                const ratingA = a.eloStarRating !== null && a.eloStarRating !== undefined
+                    ? parseFloat(a.eloStarRating)
+                    : -Infinity;
+                const ratingB = b.eloStarRating !== null && b.eloStarRating !== undefined
+                    ? parseFloat(b.eloStarRating)
+                    : -Infinity;
+
+                // Primary sort: by ELO star rating (descending)
+                if (ratingA !== ratingB) {
+                    return ratingB - ratingA;
+                }
+
+                // Secondary sort: by name (ascending) when ratings are equal
+                return a.name.localeCompare(b.name);
+            });
+        }
+
+
+        // Function to generate subway icon HTML using sprite
+        function generateSubwayIcons(routes) {
+            if (!routes || routes.length === 0) return '';
+
+            const iconsHtml = routes.map(route => {
+                const iconId = safeSubwayFragmentId(route);
+                if (!iconId) return '';
+
+                return `
+                    <span class="subway-icon">
+                        <svg width="28" height="28" viewBox="0 0 90 90">
+                            <use href="#${iconId}" xlink:href="#${iconId}"></use>
+                        </svg>
+                    </span>
+                `;
+            }).join('');
+
+            return `<div class="cafe-subway-icons">${iconsHtml}</div>`;
+        }
+
+        async function loadImages() {
+            const gallery = document.getElementById('gallery');
+
+            try {
+                // Load cafes once per page load (memory: cachedCafes).
+                // When using DynamoDB via GET /cafes, do not use localStorage for the list: it stays stale
+                // after new uploads while the map refreshes from the API in the background.
+                if (!cachedCafes) {
+                    let skipNetwork = false;
+                    if (!USE_CAFE_API) {
+                        const cachedData = getCachedData();
+                        const hasValidEloRating = cachedData && cachedData.length > 0 &&
+                            cachedData[0].hasOwnProperty('eloStarRating') &&
+                            cachedData.some(cafe => cafe.eloStarRating !== null && cafe.eloStarRating !== undefined);
+
+                        if (hasValidEloRating) {
+                            cachedCafes = cachedData;
+                            skipNetwork = true;
+                        } else if (cachedData) {
+                            localStorage.removeItem(CACHE_KEY);
+                        }
+                    }
+
+                    if (!skipNetwork) {
+                        let cafesRaw = [];
+                        if (USE_CAFE_API) {
+                            const response = await fetch(CAFE_API_URL + '/cafes?limit=500');
+                            if (!response.ok) {
+                                throw new Error(`Cafe API failed: ${response.status}`);
+                            }
+                            const jsonData = await response.json();
+                            cafesRaw = jsonData.cafes || [];
+                            cachedCafes = cafesRaw.map(cafeFromDynamoApiRecord);
+                        } else {
+                            if (!CAFES_JSON_URL) {
+                                throw new Error('Configure CafeHopConfig.cafeUrl (API) or bucketUrl + cafes.json');
+                            }
+                            const response = await fetch(CAFES_JSON_URL);
+                            if (!response.ok) {
+                                throw new Error(`Failed to fetch cafes.json: ${response.status}`);
+                            }
+                            const jsonData = await response.json();
+                            cafesRaw = jsonData.cafes || [];
+                            cachedCafes = cafesRaw.map(cafe => {
+                                const name = cafe.name || parseCafeName(cafe.key);
+                                const imageUrl = cafe.imageUrl || (BUCKET_URL ? BUCKET_URL + '/' + cafe.key : '');
+                                return {
+                                    key: cafe.key,
+                                    name: name,
+                                    imageUrl: imageUrl,
+                                    thumbnailUrl: cafe.thumbnailUrl || imageUrl,
+                                    lastModified: cafe.lastModified || '',
+                                    neighborhood: cafe.neighborhood || null,
+                                    subwayRoutes: cafe.subwayRoutes || null,
+                                    subwayStation: cafe.subwayStation || null,
+                                    subwayDistanceM: cafe.subwayDistanceM || null,
+                                    latitude: cafe.latitude || null,
+                                    longitude: cafe.longitude || null,
+                                    eloStarRating: cafe.eloStarRating || null,
+                                    stars: cafe.eloStarRating || 0,
+                                    notes: cafe.notes || null,
+                                    google_maps_link: cafe.google_maps_link || null,
+                                    google_maps_place_type: cafe.google_maps_place_type || null,
+                                    shareCardPngUrl: cafe.shareCardPngUrl || '',
+                                    visited: true
+                                };
+                            });
+                        }
+
+                        // Cache the results
+                        setCachedData(cachedCafes);
+
+                        // Clear sort/filter caches when data is refreshed
+                        cachedSortedCafes = null;
+                        cachedFilteredCafes = null;
+                    }
+                }
+
+                const cafes = cachedCafes;
+
+                // Clear current gallery contents
+                gallery.innerHTML = '';
+
+                // Build neighborhood filter options from cached cafes
+                const neighborhoodSelect = document.getElementById('neighborhood-filter');
+                if (neighborhoodSelect) {
+                    const previousValue = currentNeighborhoodFilter;
+                    const neighborhoods = Array.from(
+                        new Set(
+                            cafes
+                                .map(c => c.neighborhood)
+                                .filter(n => n && n.trim().length > 0)
+                        )
+                    ).sort((a, b) => a.localeCompare(b));
+
+                    neighborhoodSelect.innerHTML = '<option value=\"all\">All</option>' +
+                        neighborhoods.map(n => `<option value=\"${escapeHtml(n)}\">${escapeHtml(n)}</option>`).join('');
+
+                    // Restore previous selection if still available
+                    if (previousValue && previousValue !== 'all' && neighborhoods.includes(previousValue)) {
+                        neighborhoodSelect.value = previousValue;
+                        currentNeighborhoodFilter = previousValue;
+                    } else {
+                        neighborhoodSelect.value = 'all';
+                        currentNeighborhoodFilter = 'all';
+                    }
+                }
+
+                // Apply neighborhood filter (with caching)
+                let filteredCafes;
+                const filterKey = currentNeighborhoodFilter;
+                if (cachedFilteredCafes && cachedFilteredCafes.filterKey === filterKey) {
+                    filteredCafes = cachedFilteredCafes.cafes;
+                } else {
+                    filteredCafes = currentNeighborhoodFilter === 'all'
+                        ? cafes
+                        : cafes.filter(cafe => cafe.neighborhood === currentNeighborhoodFilter);
+                    cachedFilteredCafes = { filterKey, cafes: filteredCafes };
+                }
+
+                // Sort cafes based on current sort mode (with caching)
+                let sortedCafes;
+                const sortKey = `${currentSort}-${filterKey}`;
+                if (cachedSortedCafes && cachedSortedCafes.sortKey === sortKey) {
+                    sortedCafes = cachedSortedCafes.cafes;
+                } else {
+                    sortedCafes = currentSort === 'name' ? sortByName(filteredCafes) : sortByEloRating(filteredCafes);
+                    cachedSortedCafes = { sortKey, cafes: sortedCafes };
+                }
+
+                // Render sorted cafes incrementally to avoid blocking UI
+                await renderCafesIncrementally(sortedCafes, gallery);
+            } catch (error) {
+                console.error('Error loading images:', error);
+                const local =
+                    location.hostname === '127.0.0.1' || location.hostname === 'localhost';
+                const detail =
+                    local && error && error.message
+                        ? `<p class="loading" style="font-size:0.8rem;margin-top:0.35rem;opacity:0.82">${escapeHtml(
+                            error.message
+                        )}</p>`
+                        : '';
+                gallery.innerHTML =
+                    '<div class="loading">Error loading images. Please try again later.</div>' + detail;
+            }
+        }
+
+        // Render cafes incrementally using requestAnimationFrame to avoid blocking
+        async function renderCafesIncrementally(cafes, gallery) {
+            const BATCH_SIZE = 15; // Render 15 cards per frame (increased from 10 for better performance)
+            let index = 0;
+
+            function renderBatch() {
+                const end = Math.min(index + BATCH_SIZE, cafes.length);
+
+                for (let i = index; i < end; i++) {
+                    const cafe = cafes[i];
+                    const card = createCafeCard(cafe);
+                    gallery.appendChild(card);
+                }
+
+                index = end;
+
+                if (index < cafes.length) {
+                    requestAnimationFrame(renderBatch);
+                }
+            }
+
+            // Start rendering
+            renderBatch();
+        }
+
+        // Function to handle sharing the image
+        async function shareImage(imageUrl, fileName) {
+            const safeUrl = safeHttpUrl(imageUrl);
+            if (!safeUrl) {
+                alert('Invalid share link.');
+                return;
+            }
+            const safeBase = String(fileName || 'cafe').replace(/[^a-zA-Z0-9 _.-]/g, '_').trim().slice(0, 120) || 'cafe';
+            try {
+                const response = await fetch(safeUrl, {
+                    mode: "cors",
+                    cache: "no-store",
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Download failed: ${response.status}`);
+                }
+
+                const blob = await response.blob();
+
+                const blobUrl = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+
+                a.href = blobUrl;
+                a.download = `${safeBase}.png`; // name user gets
+                document.body.appendChild(a);
+                a.click();
+
+                a.remove();
+                URL.revokeObjectURL(blobUrl);
+            } catch (err) {
+                console.error("Download error:", err);
+                alert("Download failed.");
+            }
+        }
+
+
+        // Extract card creation into a separate function for reusability
+        function createCafeCard(cafe) {
+            const card = document.createElement('div');
+            card.className = 'cafe-card visited';
+
+            const notesHtml = cafe.notes
+                ? `<div class="cafe-notes">${escapeHtml(cafe.notes)}</div>`
+                : '';
+
+            const starsHtml = `
+                <div class="stars-overlay">
+                    <div class="cups-container">
+                        ${generateStars(cafe.stars)}
+                    </div>
+                    ${notesHtml}
+                </div>
+            `;
+
+            const gmUrl = safeHttpUrl(cafe.google_maps_link);
+            const neighborhoodHtml = cafe.neighborhood
+                ? `<div class="cafe-neighborhood">` +
+                (gmUrl
+                    ? `<a href="${escapeHtml(gmUrl)}" target="_blank" rel="noopener noreferrer" class="cafe-pin" title="Open in Google Maps">📍</a>`
+                    : '') +
+                `<span>${escapeHtml(cafe.neighborhood)}</span></div>`
+                : '';
+
+            const subwayIconsHtml = generateSubwayIcons(cafe.subwayRoutes);
+
+            let placeTypeIconHtml = '';
+            const ptype = String(cafe.google_maps_place_type || '').toLowerCase();
+            if (ptype === 'bakery') {
+                placeTypeIconHtml = `<div class="cafe-place-type-icon">🥐</div>`;
+            } else if (/^[a-z_]+$/.test(ptype) && ptype.length >= 2 && ptype.length <= 64) {
+                placeTypeIconHtml = `<div class="cafe-place-type-icon">☕</div>`;
+            }
+
+            // Full S3 object for cards; thumbnailUrl is often mapThumbnails/* (~150px JPEG for the map).
+            const imageSrcRaw = cafe.imageUrl || cafe.thumbnailUrl;
+            const imageSrc = safeHttpUrl(imageSrcRaw);
+
+            card.innerHTML = `
+                <div class="cafe-image-container">
+                    <img class="cafe-image" src="${escapeHtml(imageSrc)}" alt="${escapeHtml(cafe.name)}" loading="lazy">
+                    ${starsHtml}
+                    ${placeTypeIconHtml}
+                    ${subwayIconsHtml}
+                </div>
+                <div class="cafe-name">${escapeHtml(cafe.name)}</div>
+                ${neighborhoodHtml}
+            `;
+
+            const imageContainer = card.querySelector('.cafe-image-container');
+            const sharePng = safeHttpUrl(cafe.shareCardPngUrl);
+            if (sharePng && navigator.share) {
+                const shareBtn = document.createElement('button');
+                shareBtn.type = 'button';
+                shareBtn.className = 'cafe-share-button';
+                shareBtn.title = 'Share Cafe';
+                shareBtn.setAttribute('aria-label', 'Share cafe');
+                shareBtn.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/>
+                        </svg>`;
+                const stop = (e) => e.stopPropagation();
+                shareBtn.addEventListener('touchstart', stop, { passive: true });
+                shareBtn.addEventListener('touchend', stop, { passive: true });
+                shareBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    shareImage(sharePng, cafe.name);
+                });
+                imageContainer.appendChild(shareBtn);
+            }
+
+            // Add click/tap handler to toggle stars overlay on touch devices
+            let touchStartTime = 0;
+            let touchStartY = 0;
+
+            imageContainer.addEventListener('touchstart', function (e) {
+                touchStartTime = Date.now();
+                touchStartY = e.touches[0].clientY;
+            }, { passive: true });
+
+            imageContainer.addEventListener('touchend', function (e) {
+                const touchEndTime = Date.now();
+                const touchEndY = e.changedTouches[0].clientY;
+                const touchDuration = touchEndTime - touchStartTime;
+                const touchDistance = Math.abs(touchEndY - touchStartY);
+
+                // Only trigger if it's a quick tap (not a swipe or long press)
+                if (touchDuration < 300 && touchDistance < 10) {
+                    e.preventDefault();
+                    toggleStars(imageContainer);
+                }
+            });
+
+            imageContainer.addEventListener('click', function (e) {
+                // For mouse clicks on desktop
+                toggleStars(imageContainer);
+            });
+
+            function toggleStars(cardElement) {
+                // Check if this card is already showing stars
+                const isShowing = cardElement.classList.contains('show-stars');
+
+                // Close all cards first
+                document.querySelectorAll('.cafe-image-container').forEach(c => {
+                    c.classList.remove('show-stars');
+                });
+
+                // If this card wasn't showing, open it; otherwise leave it closed
+                if (!isShowing) {
+                    cardElement.classList.add('show-stars');
+                }
+            }
+
+            return card;
+        }
+
+        // Toggle sort mode
+        const sortButton = document.getElementById('toggle-sort');
+        function updateSortLabel() {
+            if (!sortButton) return;
+            sortButton.textContent = currentSort === 'rating' ? 'RATING' : 'A/Z';
+        }
+
+        if (sortButton) {
+            sortButton.addEventListener('click', () => {
+                currentSort = currentSort === 'rating' ? 'name' : 'rating';
+                updateSortLabel();
+                loadImages();
+            });
+            // Set initial label based on default sort mode
+            updateSortLabel();
+        }
+
+        // Neighborhood filter change
+        const neighborhoodSelectEl = document.getElementById('neighborhood-filter');
+        if (neighborhoodSelectEl) {
+            neighborhoodSelectEl.addEventListener('change', (e) => {
+                currentNeighborhoodFilter = e.target.value;
+                loadImages();
+            });
+        }
+
+        // Load images when page loads
+        document.addEventListener('DOMContentLoaded', loadImages);
+    </script>
+</body>
+
+</html>

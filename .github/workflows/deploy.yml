@@ -1,0 +1,73 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate docs/api-config.js
+        env:
+          CAFEHOP_AUTH_URL: ${{ secrets.CAFEHOP_AUTH_URL }}
+          CAFEHOP_IMAGE_URL: ${{ secrets.CAFEHOP_IMAGE_URL }}
+          CAFEHOP_CAFE_URL: ${{ secrets.CAFEHOP_CAFE_URL }}
+          CAFEHOP_BUCKET_URL: ${{ secrets.CAFEHOP_BUCKET_URL }}
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          import json
+          import os
+          import pathlib
+          import sys
+
+          keys = {
+              "authUrl": "CAFEHOP_AUTH_URL",
+              "imageUrl": "CAFEHOP_IMAGE_URL",
+              "cafeUrl": "CAFEHOP_CAFE_URL",
+              "bucketUrl": "CAFEHOP_BUCKET_URL",
+          }
+          for js_key, env_name in keys.items():
+              if not os.environ.get(env_name):
+                  print(f"Missing GitHub Actions secret: {env_name}", file=sys.stderr)
+                  sys.exit(1)
+
+          obj = {k: os.environ[v] for k, v in keys.items()}
+          body = (
+              "window.CafeHopConfig = "
+              + json.dumps(obj, indent=2)
+              + ";\n\n"
+              + 'window.CafeHopConfig.cafesJsonUrl = window.CafeHopConfig.bucketUrl + "/cafes.json";\n'
+          )
+          pathlib.Path("docs/api-config.js").write_text(body, encoding="utf-8")
+          PY
+          test -s docs/api-config.js
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
