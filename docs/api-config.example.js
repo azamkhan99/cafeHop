@@ -6,5 +6,3 @@ window.CafeHopConfig = {
   cafeUrl: "",
   bucketUrl: "",
 };
-
-window.CafeHopConfig.cafesJsonUrl = window.CafeHopConfig.bucketUrl + "/cafes.json";

@@ -233,6 +233,13 @@
             margin-top: 0;
         }
 
+        /* Full-width row so IntersectionObserver can detect approach to list end */
+        .gallery-sentinel {
+            grid-column: 1 / -1;
+            min-height: 1px;
+            pointer-events: none;
+        }
+
         .cafe-card {
             background: white;
             border-radius: 0;
@@ -706,52 +713,18 @@
     <script>
         const C = window.CafeHopConfig || {};
         const BUCKET_URL = (C.bucketUrl || '').replace(/\/$/, '');
-        const CAFES_JSON_URL = C.cafesJsonUrl || (BUCKET_URL ? BUCKET_URL + '/cafes.json' : '');
         const CAFE_API_URL = (C.cafeUrl || '').replace(/\/$/, '');
-        const USE_CAFE_API = Boolean(CAFE_API_URL && !CAFE_API_URL.includes('YOUR_CAFE'));
-        const CACHE_KEY = 'cafeGalleryDataDdb';
-        const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes cache
         let currentSort = 'rating'; // Default sort by ELO rating
         let currentNeighborhoodFilter = 'all';
         let cachedCafes = null; // Cache cafes in memory so sort/filter don't refetch
         let cachedSortedCafes = null; // Cache sorted cafes to avoid re-sorting
         let cachedFilteredCafes = null; // Cache filtered cafes
+        let galleryScrollObserver = null;
 
-        // Cache management functions
-        function getCachedData() {
-            try {
-                const cached = localStorage.getItem(CACHE_KEY);
-                if (!cached) return null;
-
-                const data = JSON.parse(cached);
-                const now = Date.now();
-
-                // Check if cache is still valid
-                if (now - data.timestamp < CACHE_DURATION) {
-                    return data.cafes;
-                } else {
-                    // Cache expired
-                    localStorage.removeItem(CACHE_KEY);
-                    return null;
-                }
-            } catch (e) {
-                console.warn('Error reading cache:', e);
-                return null;
-            }
-        }
-
-        function setCachedData(cafes) {
-            try {
-                const data = {
-                    timestamp: Date.now(),
-                    cafes: cafes
-                };
-                localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-            } catch (e) {
-                console.warn('Error saving cache:', e);
-            }
-        }
-
+        /** First paint: few cards + few image requests; more rows append on scroll. */
+        const GALLERY_INITIAL_CARDS = 24;
+        const GALLERY_SCROLL_CHUNK = 20;
+        const GALLERY_EAGER_IMAGE_COUNT = 8;
 
         // Function to parse cafe name from filename
         function parseCafeName(filename) {
@@ -890,78 +863,26 @@
             const gallery = document.getElementById('gallery');
 
             try {
-                // Load cafes once per page load (memory: cachedCafes).
-                // When using DynamoDB via GET /cafes, do not use localStorage for the list: it stays stale
-                // after new uploads while the map refreshes from the API in the background.
+                if (galleryScrollObserver) {
+                    galleryScrollObserver.disconnect();
+                    galleryScrollObserver = null;
+                }
+
+                // Load cafes once per page load (memory: cachedCafes). List always comes from GET /cafes (DynamoDB).
                 if (!cachedCafes) {
-                    let skipNetwork = false;
-                    if (!USE_CAFE_API) {
-                        const cachedData = getCachedData();
-                        const hasValidEloRating = cachedData && cachedData.length > 0 &&
-                            cachedData[0].hasOwnProperty('eloStarRating') &&
-                            cachedData.some(cafe => cafe.eloStarRating !== null && cafe.eloStarRating !== undefined);
-
-                        if (hasValidEloRating) {
-                            cachedCafes = cachedData;
-                            skipNetwork = true;
-                        } else if (cachedData) {
-                            localStorage.removeItem(CACHE_KEY);
-                        }
+                    if (!CAFE_API_URL || CAFE_API_URL.includes('YOUR_CAFE')) {
+                        throw new Error('Configure CafeHopConfig.cafeUrl (café API backed by DynamoDB).');
                     }
-
-                    if (!skipNetwork) {
-                        let cafesRaw = [];
-                        if (USE_CAFE_API) {
-                            const response = await fetch(CAFE_API_URL + '/cafes?limit=500');
-                            if (!response.ok) {
-                                throw new Error(`Cafe API failed: ${response.status}`);
-                            }
-                            const jsonData = await response.json();
-                            cafesRaw = jsonData.cafes || [];
-                            cachedCafes = cafesRaw.map(cafeFromDynamoApiRecord);
-                        } else {
-                            if (!CAFES_JSON_URL) {
-                                throw new Error('Configure CafeHopConfig.cafeUrl (API) or bucketUrl + cafes.json');
-                            }
-                            const response = await fetch(CAFES_JSON_URL);
-                            if (!response.ok) {
-                                throw new Error(`Failed to fetch cafes.json: ${response.status}`);
-                            }
-                            const jsonData = await response.json();
-                            cafesRaw = jsonData.cafes || [];
-                            cachedCafes = cafesRaw.map(cafe => {
-                                const name = cafe.name || parseCafeName(cafe.key);
-                                const imageUrl = cafe.imageUrl || (BUCKET_URL ? BUCKET_URL + '/' + cafe.key : '');
-                                return {
-                                    key: cafe.key,
-                                    name: name,
-                                    imageUrl: imageUrl,
-                                    thumbnailUrl: cafe.thumbnailUrl || imageUrl,
-                                    lastModified: cafe.lastModified || '',
-                                    neighborhood: cafe.neighborhood || null,
-                                    subwayRoutes: cafe.subwayRoutes || null,
-                                    subwayStation: cafe.subwayStation || null,
-                                    subwayDistanceM: cafe.subwayDistanceM || null,
-                                    latitude: cafe.latitude || null,
-                                    longitude: cafe.longitude || null,
-                                    eloStarRating: cafe.eloStarRating || null,
-                                    stars: cafe.eloStarRating || 0,
-                                    notes: cafe.notes || null,
-                                    google_maps_link: cafe.google_maps_link || null,
-                                    google_maps_place_type: cafe.google_maps_place_type || null,
-                                    shareCardPngUrl: cafe.shareCardPngUrl || '',
-                                    visited: true
-                                };
-                            });
-                        }
-
-                        // Cache the results
-                        setCachedData(cachedCafes);
-
-                        // Clear sort/filter caches when data is refreshed
-                        cachedSortedCafes = null;
-                        cachedFilteredCafes = null;
+                    const response = await fetch(CAFE_API_URL + '/cafes?limit=500');
+                    if (!response.ok) {
+                        throw new Error(`Cafe API failed: ${response.status}`);
                     }
+                    const jsonData = await response.json();
+                    const cafesRaw = jsonData.cafes || [];
+                    cachedCafes = cafesRaw.map(cafeFromDynamoApiRecord);
+
+                    cachedSortedCafes = null;
+                    cachedFilteredCafes = null;
                 }
 
                 const cafes = cachedCafes;
@@ -1016,8 +937,8 @@
                     cachedSortedCafes = { sortKey, cafes: sortedCafes };
                 }
 
-                // Render sorted cafes incrementally to avoid blocking UI
-                await renderCafesIncrementally(sortedCafes, gallery);
+                // First batch of cards only (rest on scroll) so fewer images compete on open
+                renderCafesIncrementally(sortedCafes, gallery);
             } catch (error) {
                 console.error('Error loading images:', error);
                 const local =
@@ -1033,29 +954,62 @@
             }
         }
 
-        // Render cafes incrementally using requestAnimationFrame to avoid blocking
-        async function renderCafesIncrementally(cafes, gallery) {
-            const BATCH_SIZE = 15; // Render 15 cards per frame (increased from 10 for better performance)
-            let index = 0;
-
-            function renderBatch() {
-                const end = Math.min(index + BATCH_SIZE, cafes.length);
-
-                for (let i = index; i < end; i++) {
-                    const cafe = cafes[i];
-                    const card = createCafeCard(cafe);
-                    gallery.appendChild(card);
-                }
-
-                index = end;
-
-                if (index < cafes.length) {
-                    requestAnimationFrame(renderBatch);
-                }
+        function renderCafesIncrementally(cafes, gallery) {
+            if (galleryScrollObserver) {
+                galleryScrollObserver.disconnect();
+                galleryScrollObserver = null;
             }
 
-            // Start rendering
-            renderBatch();
+            if (!cafes.length) {
+                return;
+            }
+
+            let nextIndex = 0;
+
+            function appendCount(n) {
+                const end = Math.min(nextIndex + n, cafes.length);
+                for (let i = nextIndex; i < end; i++) {
+                    const eager = i < GALLERY_EAGER_IMAGE_COUNT;
+                    gallery.appendChild(createCafeCard(cafes[i], {
+                        eagerImage: eager,
+                        fetchPriority: eager ? 'high' : undefined,
+                    }));
+                }
+                nextIndex = end;
+                return nextIndex >= cafes.length;
+            }
+
+            appendCount(Math.min(GALLERY_INITIAL_CARDS, cafes.length));
+            if (nextIndex >= cafes.length) {
+                return;
+            }
+
+            const sentinel = document.createElement('div');
+            sentinel.className = 'gallery-sentinel';
+            sentinel.setAttribute('aria-hidden', 'true');
+            gallery.appendChild(sentinel);
+
+            let rafPending = false;
+            galleryScrollObserver = new IntersectionObserver(function (entries) {
+                if (!entries.some(function (e) { return e.isIntersecting; })) {
+                    return;
+                }
+                if (rafPending) {
+                    return;
+                }
+                rafPending = true;
+                requestAnimationFrame(function () {
+                    rafPending = false;
+                    appendCount(GALLERY_SCROLL_CHUNK);
+                    if (nextIndex >= cafes.length) {
+                        galleryScrollObserver.disconnect();
+                        galleryScrollObserver = null;
+                        sentinel.remove();
+                    }
+                });
+            }, { root: null, rootMargin: '600px 0px', threshold: 0 });
+
+            galleryScrollObserver.observe(sentinel);
         }
 
         // Function to handle sharing the image
@@ -1096,7 +1050,16 @@
 
 
         // Extract card creation into a separate function for reusability
-        function createCafeCard(cafe) {
+        function createCafeCard(cafe, imgOpts) {
+            imgOpts = imgOpts || {};
+            const eagerImage = Boolean(imgOpts.eagerImage);
+            const fetchPriority = imgOpts.fetchPriority;
+            const loadingAttr = eagerImage ? 'eager' : 'lazy';
+            const fetchPriorityAttr =
+                fetchPriority === 'high' || fetchPriority === 'low'
+                    ? ' fetchpriority="' + fetchPriority + '"'
+                    : '';
+
             const card = document.createElement('div');
             card.className = 'cafe-card visited';
 
@@ -1138,7 +1101,7 @@
 
             card.innerHTML = `
                 <div class="cafe-image-container">
-                    <img class="cafe-image" src="${escapeHtml(imageSrc)}" alt="${escapeHtml(cafe.name)}" loading="lazy">
+                    <img class="cafe-image" src="${escapeHtml(imageSrc)}" alt="${escapeHtml(cafe.name)}" loading="${loadingAttr}"${fetchPriorityAttr}>
                     ${starsHtml}
                     ${placeTypeIconHtml}
                     ${subwayIconsHtml}

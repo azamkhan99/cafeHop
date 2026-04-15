@@ -315,9 +315,7 @@
     <script>
         const C = window.CafeHopConfig || {};
         const BUCKET_URL = (C.bucketUrl || '').replace(/\/$/, '');
-        const CAFES_JSON_URL = C.cafesJsonUrl || (BUCKET_URL ? BUCKET_URL + '/cafes.json' : '');
         const CAFE_API_URL = (C.cafeUrl || '').replace(/\/$/, '');
-        const USE_CAFE_API = Boolean(CAFE_API_URL && !CAFE_API_URL.includes('YOUR_CAFE'));
         const CACHE_KEY = 'cafeMapDataDdb';
         const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
 
@@ -568,28 +566,18 @@
                     document.getElementById('loading').style.display = 'none';
                 }
 
-                let cafesFromJson = [];
-                if (USE_CAFE_API) {
-                    const response = await fetch(CAFE_API_URL + '/cafes?limit=500');
-                    if (!response.ok) {
-                        throw new Error(`Cafe API failed: ${response.status}`);
-                    }
-                    const jsonData = await response.json();
-                    cafesFromJson = (jsonData.cafes || []).map(cafeFromDynamoApiRecord);
-                } else {
-                    if (!CAFES_JSON_URL) {
-                        throw new Error('Configure CafeHopConfig.cafeUrl or bucketUrl');
-                    }
-                    const response = await fetch(CAFES_JSON_URL);
-                    if (!response.ok) {
-                        throw new Error(`Failed to fetch cafes.json: ${response.status}`);
-                    }
-                    const jsonData = await response.json();
-                    cafesFromJson = jsonData.cafes || [];
+                if (!CAFE_API_URL || CAFE_API_URL.includes('YOUR_CAFE')) {
+                    throw new Error('Configure CafeHopConfig.cafeUrl (café API backed by DynamoDB).');
                 }
+                const response = await fetch(CAFE_API_URL + '/cafes?limit=500');
+                if (!response.ok) {
+                    throw new Error(`Cafe API failed: ${response.status}`);
+                }
+                const jsonData = await response.json();
+                const cafesFromApi = (jsonData.cafes || []).map(cafeFromDynamoApiRecord);
 
                 // Process cafes and add markers
-                const cafePromises = cafesFromJson.map(async (cafe) => {
+                const cafePromises = cafesFromApi.map(async (cafe) => {
                     // Skip if no GPS coordinates
                     let coordinates = null;
                     if (cafe.latitude && cafe.longitude) {

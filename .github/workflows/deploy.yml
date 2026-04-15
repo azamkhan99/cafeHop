@@ -50,12 +50,7 @@ jobs:
                   sys.exit(1)
 
           obj = {k: os.environ[v] for k, v in keys.items()}
-          body = (
-              "window.CafeHopConfig = "
-              + json.dumps(obj, indent=2)
-              + ";\n\n"
-              + 'window.CafeHopConfig.cafesJsonUrl = window.CafeHopConfig.bucketUrl + "/cafes.json";\n'
-          )
+          body = "window.CafeHopConfig = " + json.dumps(obj, indent=2) + ";\n"
           pathlib.Path("docs/api-config.js").write_text(body, encoding="utf-8")
           PY
           test -s docs/api-config.js
