@@ -41,6 +41,13 @@
             color: var(--schema-text-primary);
         }
 
+        /* Match map: fill iOS Safari visual viewport so no band below fixed chrome */
+        body.has-chrome[data-chrome-page="add"] {
+            min-height: 100vh;
+            min-height: 100dvh;
+            min-height: -webkit-fill-available;
+        }
+
         .content-wrapper.add-content {
             padding: 1.25rem max(1.25rem, env(safe-area-inset-left)) 1.5rem max(1.25rem, env(safe-area-inset-right));
         }

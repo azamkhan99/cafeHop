@@ -18,11 +18,15 @@
 
 html {
     height: 100%;
+    /* iOS Safari: percentage heights on body resolve against the painted viewport */
+    height: -webkit-fill-available;
 }
 
 body.has-chrome {
-    min-height: 100dvh;
+    /* Order matters: each line overrides the previous where supported */
     min-height: 100vh;
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
     padding-top: calc(var(--chrome-header-h) + var(--chrome-header-pad-top) + 6px);
     padding-bottom: var(--chrome-footer-total);
 }
