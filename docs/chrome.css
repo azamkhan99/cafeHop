@@ -1,0 +1,423 @@
+/* Shared app chrome: thin header + floating footer pill (iPhone-first, safe areas). Shell A — light editorial. */
+
+:root {
+    --chrome-header-h: 40px;
+    --chrome-footer-track-h: 44px;
+    --chrome-fab-size: 58px;
+    /* FAB is larger than the pill; centered, it overlaps top and bottom of the bar equally */
+    --chrome-fab-past-track: calc((var(--chrome-fab-size) - var(--chrome-footer-track-h)) / 2);
+    --chrome-footer-pad: max(10px, env(safe-area-inset-bottom, 0px));
+    /* Nudge FAB up so it does not clip past the home indicator / screen bottom */
+    --chrome-fab-lift: -4px;
+    --chrome-footer-total: calc(var(--chrome-footer-pad) + var(--chrome-footer-track-h) + var(--chrome-fab-past-track) + 18px - var(--chrome-fab-lift));
+    --chrome-header-pad-top: max(5px, env(safe-area-inset-top, 0px));
+    /* Lower alpha = more see-through; blur keeps controls readable */
+    --chrome-frost: rgba(255, 255, 255, 0.48);
+    --chrome-frost-border: rgba(0, 0, 0, 0.05);
+}
+
+html {
+    height: 100%;
+}
+
+body.has-chrome {
+    min-height: 100dvh;
+    min-height: 100vh;
+    padding-top: calc(var(--chrome-header-h) + var(--chrome-header-pad-top) + 6px);
+    padding-bottom: var(--chrome-footer-total);
+}
+
+/* --- Thin header (light, constrained width) --- */
+.chrome-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 3000;
+    padding: var(--chrome-header-pad-top) max(10px, env(safe-area-inset-right)) 5px max(10px, env(safe-area-inset-left));
+    background: var(--schema-bg, #fdfbf8);
+    border-bottom: 1px solid var(--schema-border-tertiary, rgba(0, 0, 0, 0.1));
+    box-sizing: border-box;
+}
+
+.chrome-header-inner {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: var(--chrome-header-h);
+}
+
+/* Match gallery “Neighborhood” row: .filter-wrapper */
+.chrome-brand {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.0625rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    color: var(--schema-text-primary, rgba(0, 0, 0, 0.85));
+    text-decoration: none;
+    line-height: 1;
+    min-height: var(--chrome-header-h);
+    display: inline-flex;
+    align-items: center;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.chrome-brand-accent {
+    color: var(--schema-accent, #a37b55);
+    font-weight: 500;
+    letter-spacing: 0.08em;
+}
+
+.chrome-sort {
+    flex-shrink: 0;
+    min-width: 44px;
+    min-height: 30px;
+    padding: 5px 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--schema-text-secondary, rgba(0, 0, 0, 0.85));
+    background: var(--schema-bg, #fdfbf8);
+    border: 0.5px solid var(--schema-border-secondary, rgba(0, 0, 0, 0.12));
+    border-radius: 20px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    text-decoration: none;
+    box-sizing: border-box;
+    line-height: 1;
+}
+
+.chrome-sort:hover {
+    background: var(--schema-bg-secondary, #f5ede3);
+}
+
+.chrome-sort:active {
+    background: var(--schema-bg-secondary, #f0e8de);
+}
+
+/* --- Footer: frosted pill contains all controls --- */
+.chrome-footer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 3000;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    padding: calc(4px + var(--chrome-fab-past-track)) max(16px, env(safe-area-inset-right)) var(--chrome-footer-pad) max(16px, env(safe-area-inset-left));
+    box-sizing: border-box;
+    pointer-events: none;
+    background: transparent;
+}
+
+.chrome-footer-track {
+    pointer-events: auto;
+    width: 100%;
+    max-width: none;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    grid-template-rows: var(--chrome-footer-track-h);
+    align-items: center;
+    justify-items: stretch;
+    height: var(--chrome-footer-track-h);
+    min-height: var(--chrome-footer-track-h);
+    padding: 0 6px 0 10px;
+    overflow: visible;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.58);
+    border: 1px solid var(--chrome-frost-border);
+    box-shadow:
+        0 2px 20px rgba(0, 0, 0, 0.05),
+        0 1px 0 rgba(255, 255, 255, 0.55) inset;
+    box-sizing: border-box;
+    gap: 0;
+}
+
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+    .chrome-footer-track {
+        background: var(--chrome-frost);
+        backdrop-filter: blur(22px) saturate(1.2);
+        -webkit-backdrop-filter: blur(22px) saturate(1.2);
+    }
+}
+
+.chrome-footer-left {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    justify-self: start;
+    height: 100%;
+    overflow: visible;
+}
+
+.chrome-footer-right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    justify-self: end;
+    height: 100%;
+    padding-right: 2px;
+    overflow: visible;
+}
+
+.chrome-footer-fab-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    justify-self: center;
+    height: 100%;
+    overflow: visible;
+}
+
+.chrome-footer-btn {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: #1a1a1a;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.chrome-footer-btn:active {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.chrome-fab-add {
+    width: var(--chrome-fab-size);
+    height: var(--chrome-fab-size);
+    min-width: var(--chrome-fab-size);
+    min-height: var(--chrome-fab-size);
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #fff;
+    color: #111;
+    font-size: 2rem;
+    font-weight: 200;
+    line-height: 1;
+    text-decoration: none;
+    transform: translateY(var(--chrome-fab-lift));
+    box-shadow:
+        0 10px 28px rgba(0, 0, 0, 0.14),
+        0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.chrome-fab-add:active {
+    transform: translateY(var(--chrome-fab-lift)) scale(0.96);
+}
+
+/* Gallery (grid) icon inside center FAB — e.g. add page links to gallery */
+.chrome-fab-add .chrome-fab-add-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.chrome-nav-icon {
+    width: 22px;
+    height: 22px;
+    display: block;
+    flex-shrink: 0;
+}
+
+.chrome-nav-a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: 50%;
+    background: transparent;
+    color: #1a1a1a;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.chrome-nav-a:active {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+/* --- Watchlist sheet --- */
+.watchlist-sheet {
+    position: fixed;
+    inset: 0;
+    z-index: 4000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.watchlist-sheet.is-open {
+    pointer-events: auto;
+    opacity: 1;
+}
+
+.watchlist-sheet-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+}
+
+.watchlist-sheet-panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: min(78vh, 640px);
+    background: #fafafa;
+    border-radius: 16px 16px 0 0;
+    padding: 12px 16px calc(20px + env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.2);
+    transform: translateY(100%);
+    transition: transform 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.watchlist-sheet.is-open .watchlist-sheet-panel {
+    transform: translateY(0);
+}
+
+.watchlist-sheet-handle {
+    width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(0, 0, 0, 0.15);
+    margin: 4px auto 0;
+}
+
+.watchlist-sheet-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.watchlist-sheet-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #111;
+}
+
+.watchlist-sheet-close {
+    min-width: 44px;
+    min-height: 44px;
+    border: none;
+    background: transparent;
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+    color: #333;
+    border-radius: 8px;
+}
+
+.watchlist-only-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.watchlist-only-row input {
+    width: 18px;
+    height: 18px;
+}
+
+.watchlist-sheet-list {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    flex: 1;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.watchlist-sheet-empty {
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.9rem;
+    color: #666;
+    padding: 1rem 0;
+    text-align: center;
+}
+
+.watchlist-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.watchlist-row-thumb {
+    width: 52px;
+    height: 52px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: #eee;
+}
+
+.watchlist-row-meta {
+    flex: 1;
+    min-width: 0;
+}
+
+.watchlist-row-name {
+    font-weight: 500;
+    font-size: 0.95rem;
+    color: #111;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.watchlist-row-sub {
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 2px;
+}
+
+.watchlist-row-remove {
+    min-width: 44px;
+    min-height: 44px;
+    border: none;
+    background: transparent;
+    color: #888;
+    font-size: 1.1rem;
+    cursor: pointer;
+    border-radius: 8px;
+}
+
+.watchlist-row-remove:active {
+    background: rgba(0, 0, 0, 0.06);
+}

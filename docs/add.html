@@ -3,17 +3,30 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#fdfbf8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>The Cup Schema - Azam's NYC Coffee Dataset</title>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
+    <link rel="stylesheet" href="chrome.css">
     <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/lite.umd.js"></script>
     <style>
+        :root {
+            --schema-bg: #fdfbf8;
+            --schema-surface: #ffffff;
+            --schema-bg-secondary: #f5ede3;
+            --schema-text-primary: #1f1b16;
+            --schema-text-secondary: #5e564d;
+            --schema-border-secondary: rgba(44, 26, 14, 0.1);
+            --schema-border-tertiary: rgba(44, 26, 14, 0.08);
+            --schema-accent: #a37b55;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -22,244 +35,297 @@
 
         body {
             font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #fafafa;
+            background: var(--schema-bg);
             padding: 0;
             margin: 0;
-            color: rgba(0, 0, 0, 0.87);
+            color: var(--schema-text-primary);
         }
 
-        .header {
-            text-align: center;
-            width: 100%;
-            padding: 2.25rem 2rem;
-            background: #000000;
-            border-radius: 0;
-            color: white;
+        .content-wrapper.add-content {
+            padding: 1.25rem max(1.25rem, env(safe-area-inset-left)) 1.5rem max(1.25rem, env(safe-area-inset-right));
+        }
+
+        .form-container.add-clean-inner {
+            max-width: 420px;
+            margin: 0 auto;
+            padding: 0;
+        }
+
+        .add-main {
+            display: flex;
+            flex-direction: column;
+            gap: 1.75rem;
+        }
+
+        .add-photo-block {
             position: relative;
+        }
+
+        .add-photo-input {
+            position: absolute;
+            width: 0.01px;
+            height: 0.01px;
+            opacity: 0;
+            overflow: hidden;
+            z-index: -1;
+        }
+
+        .add-photo-label {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 0.55rem;
+            gap: 0.35rem;
+            min-height: 200px;
+            padding: 1.5rem 1rem;
+            border-radius: 16px;
+            border: 1px dashed rgba(163, 123, 85, 0.45);
+            background: rgba(255, 255, 255, 0.35);
+            cursor: pointer;
+            transition: border-color 0.2s ease, background 0.2s ease;
+            text-align: center;
         }
 
-        .header-content {
-            position: relative;
-            z-index: 1;
+        .add-photo-label:hover {
+            border-color: var(--schema-accent);
+            background: rgba(255, 255, 255, 0.55);
         }
 
-        .header h1 {
-            font-family: 'Anton', sans-serif;
-            font-size: 4rem;
-            font-weight: 400;
-            margin: 0;
-            letter-spacing: 0.02em;
-            color: white;
-            position: relative;
-            text-transform: uppercase;
-            display: inline-flex;
-            align-items: center;
-            gap: 0rem;
-        }
-
-        .header-title-icon {
-            width: 40px;
-            height: 40px;
-            object-fit: contain;
-        }
-
-        .header .subtitle {
-            font-family: 'Courier New', 'Courier', 'Monaco', 'Menlo', monospace;
-            font-size: 0.875rem;
-            font-weight: 400;
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-            color: rgba(255, 255, 255, 0.7);
-            margin-top: 0.15rem;
-        }
-
-        .nav-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 0.5rem;
-            margin-top: 0.35rem;
-            margin-bottom: 0.35rem;
-            position: relative;
-            z-index: 1;
-        }
-
-        .nav-button {
-            padding: 0.625rem 1.5rem;
+        .add-photo-label-title {
             font-family: 'Space Grotesk', sans-serif;
-            font-size: 0.875rem;
+            font-size: 0.9375rem;
             font-weight: 500;
-            border: none;
-            border-radius: 2px;
-            background-color: rgba(255, 255, 255, 0.12);
-            color: white;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-            text-decoration: none;
-            display: inline-block;
+            letter-spacing: 0.06em;
             text-transform: uppercase;
-            letter-spacing: 0.0892857143em;
+            color: var(--schema-text-primary);
         }
 
-        .nav-button:hover {
-            background-color: rgba(255, 255, 255, 0.16);
+        .add-photo-label-hint {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.75rem;
+            color: var(--schema-text-secondary);
         }
 
-        .nav-button.active {
-            background-color: rgba(255, 255, 255, 0.24);
-        }
-
-        .content-wrapper {
-            padding: 2rem;
-        }
-
-        .form-container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            padding: 2rem;
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: #2d3748;
-            font-weight: 500;
-        }
-
-        .form-group input[type="file"] {
-            width: 100%;
-            padding: 0.75rem;
-            border: 2px dashed #0000003a;
-            border-radius: 8px;
-            background-color: #f7fafc;
-            cursor: pointer;
-            transition: border-color 0.3s ease, background-color 0.3s ease;
-        }
-
-        .form-group input[type="file"]:hover {
-            border-color: #0000003a;
-            background-color: #edf2f7;
-        }
-
-        .form-group input[type="text"],
-        .form-group input[type="number"],
-        .form-group input[type="password"],
-        .form-group textarea {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #0000003a;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-family: inherit;
-            color: #2d3748;
-            transition: border-color 0.3s ease;
-        }
-
-        .form-group input[type="text"]:focus,
-        .form-group input[type="number"]:focus,
-        .form-group input[type="password"]:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: #0000003a;
-        }
-
-        .password-wrapper {
-            position: relative;
-        }
-
-        .password-toggle {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            color: #718096;
-            cursor: pointer;
-            font-size: 0.9rem;
-            padding: 0.25rem 0.5rem;
-            transition: color 0.2s ease;
-            z-index: 10;
-        }
-
-        .password-toggle:hover {
-            color: #2d3748;
-        }
-
-        .form-group input[type="password"] {
-            padding-right: 3rem;
-        }
-
-        .form-group textarea {
-            resize: vertical;
-            min-height: 120px;
-        }
-
-        .form-group input[type="number"] {
-            -moz-appearance: textfield;
-            appearance: textfield;
-        }
-
-        .form-group input[type="number"]::-webkit-outer-spin-button,
-        .form-group input[type="number"]::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            appearance: none;
-            margin: 0;
-        }
-
-        .submit-button {
-            width: 100%;
-            padding: 0.75rem 1.5rem;
-            font-size: 0.875rem;
-            font-weight: 500;
-            border: none;
-            border-radius: 4px;
-            background-color: #212121;
-            color: white;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.0892857143em;
-        }
-
-        .submit-button:hover {
-            background-color: #424242;
-        }
-
-        .submit-button:active {
-            background-color: #616161;
-        }
-
-        .submit-button:disabled {
-            background-color: rgba(0, 0, 0, 0.12);
-            color: rgba(0, 0, 0, 0.26);
-            cursor: not-allowed;
-        }
-
-        .file-preview {
+        .add-file-preview {
             margin-top: 1rem;
             text-align: center;
         }
 
-        .file-preview img {
+        .add-file-preview img {
             max-width: 100%;
-            max-height: 300px;
-            border-radius: 8px;
+            max-height: 240px;
+            border-radius: 12px;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .add-name-block {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .add-name-label {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.6875rem;
+            font-weight: 500;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--schema-text-secondary);
+        }
+
+        .add-name-input {
+            width: 100%;
+            border: none;
+            border-bottom: 1px solid rgba(163, 123, 85, 0.55);
+            background: transparent;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 500;
+            color: var(--schema-text-primary);
+            padding: 0.5rem 0 0.65rem;
+            outline: none;
+            border-radius: 0;
+        }
+
+        .add-name-input::placeholder {
+            color: rgba(94, 86, 77, 0.35);
+        }
+
+        .add-name-input:focus {
+            border-bottom-color: var(--schema-accent);
+        }
+
+        .add-log-btn {
+            width: 100%;
+            margin-top: 0.25rem;
+            padding: 0.85rem 1.25rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            border: none;
+            border-radius: 999px;
+            background: var(--schema-text-primary);
+            color: var(--schema-bg);
+            cursor: pointer;
+            transition: opacity 0.2s ease, transform 0.12s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .add-log-btn:hover {
+            opacity: 0.92;
+        }
+
+        .add-log-btn:active {
+            transform: scale(0.99);
+        }
+
+        .add-log-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .comparison-wrap-inner {
+            margin-top: 1.75rem;
+        }
+
+        .comparison-wrap-inner:not(:has(.comparison-section.active)) {
+            display: none;
+        }
+
+        /* Password modal (opened from Log café) */
+        .password-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 5000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+            pointer-events: none;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease, visibility 0.2s ease;
+        }
+
+        .password-modal.is-open {
+            pointer-events: auto;
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .password-modal-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(31, 27, 22, 0.45);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+        }
+
+        .password-modal-panel {
+            position: relative;
+            width: 100%;
+            max-width: 340px;
+            padding: 1.35rem 1.35rem 1.25rem;
+            border-radius: 14px;
+            background: var(--schema-bg);
+            border: 1px solid var(--schema-accent);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .password-modal-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            color: var(--schema-text-primary);
+            margin: 0 0 0.35rem;
+        }
+
+        .password-modal-sub {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.8125rem;
+            color: var(--schema-text-secondary);
+            margin: 0 0 1.1rem;
+            line-height: 1.4;
+        }
+
+        .password-modal-field {
+            margin-bottom: 0;
+        }
+
+        .password-modal-field .password-wrapper {
+            position: relative;
+        }
+
+        .password-modal-field input[type="password"] {
+            width: 100%;
+            padding: 0.7rem 2.75rem 0.7rem 0.85rem;
+            border: 1px solid var(--schema-border-secondary);
+            border-radius: 10px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem;
+            background: rgba(255, 255, 255, 0.65);
+            color: var(--schema-text-primary);
+        }
+
+        .password-modal-field input[type="password"]:focus {
+            outline: none;
+            border-color: var(--schema-accent);
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--schema-text-secondary);
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 0.25rem 0.5rem;
+            z-index: 10;
+        }
+
+        .password-modal-actions {
+            display: flex;
+            gap: 0.65rem;
+            margin-top: 1.15rem;
+            justify-content: flex-end;
+        }
+
+        .password-modal-cancel,
+        .password-modal-confirm {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 500;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 0.55rem 1rem;
+            border-radius: 999px;
+            cursor: pointer;
+            border: 1px solid var(--schema-border-secondary);
+            background: transparent;
+            color: var(--schema-text-secondary);
+        }
+
+        .password-modal-confirm {
+            background: var(--schema-text-primary);
+            color: var(--schema-bg);
+            border-color: var(--schema-text-primary);
+        }
+
+        .password-modal-cancel:hover,
+        .password-modal-confirm:hover {
+            opacity: 0.9;
         }
 
         .file-name {
             margin-top: 0.5rem;
-            color: #4a5568;
+            color: var(--schema-text-secondary);
             font-size: 0.9rem;
         }
 
@@ -491,107 +557,111 @@
         }
 
         @media (max-width: 768px) {
-            .content-wrapper {
-                padding: 1rem;
+            .content-wrapper.add-content {
+                padding: 1rem max(1rem, env(safe-area-inset-left)) 1.25rem max(1rem, env(safe-area-inset-right));
             }
 
-            .header {
-                padding: 2rem 1.5rem;
-            }
-
-            .header h1 {
-                font-size: 2.25rem;
-            }
-
-            .header h1::after {
-                margin-left: 0.5rem;
-                font-size: 1.75rem;
-            }
-
-            .header .subtitle {
-                font-size: 0.9rem;
-                letter-spacing: 0.1em;
-            }
-
-            .nav-buttons {
-                flex-wrap: wrap;
-                gap: 0.5rem;
-            }
-
-            .nav-button {
-                padding: 0.55rem 1rem;
-                font-size: 0.85rem;
-            }
-
-            .form-container {
-                padding: 1.5rem;
+            .add-photo-label {
+                min-height: 180px;
             }
         }
     </style>
 </head>
 
-<body>
-    <div class="header">
-        <div class="header-content">
-            <h1>
-                The Cup Schema
-                <img src="coffeecup2.png" alt="Coffee cup" class="header-title-icon">
-            </h1>
-            <p class="subtitle">Azam's NYC Coffee Dataset</p>
+<body class="has-chrome" data-chrome-page="add">
+    <header class="chrome-header">
+        <div class="chrome-header-inner">
+            <a href="index.html" class="chrome-brand">Cup <span class="chrome-brand-accent">Schema</span></a>
         </div>
-        <div class="nav-buttons">
-            <a href="index.html" class="nav-button">Gallery View</a>
-            <a href="map.html" class="nav-button">Map View</a>
-            <a href="add.html" class="nav-button active">Add Café</a>
-        </div>
-    </div>
+    </header>
 
-    <div class="content-wrapper">
-        <div class="form-container">
+    <div class="content-wrapper add-content">
+        <div class="form-container add-clean-inner">
             <form id="cafe-form">
-                <div class="form-group">
-                    <label for="photo">Photo</label>
-                    <input type="file" accept="image/*" id="photo" required />
-                    <div class="file-preview" id="file-preview"></div>
-                </div>
-
-                <div class="form-group">
-                    <label for="cafe">Café Name</label>
-                    <input type="text" id="cafe" placeholder="Enter café name" required />
-                </div>
-
-                <div class="form-group">
-                    <label for="notes">Notes</label>
-                    <textarea id="notes" placeholder="Add any notes about this café..."></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="upload-password">Upload Password</label>
-                    <div class="password-wrapper">
-                        <input type="password" id="upload-password" placeholder="Enter upload password" required />
-                        <button type="button" class="password-toggle" id="password-toggle"
-                            aria-label="Toggle password visibility">
-                            <span id="toggle-icon">👁️</span>
-                        </button>
+                <div id="add-main" class="add-main">
+                    <div class="add-photo-block">
+                        <input type="file" accept="image/*" id="photo" class="add-photo-input" required />
+                        <label for="photo" class="add-photo-label">
+                            <span class="add-photo-label-title">Choose a photo</span>
+                            <span class="add-photo-label-hint">JPEG, PNG, or HEIC</span>
+                        </label>
+                        <div class="add-file-preview" id="file-preview"></div>
                     </div>
+                    <div class="add-name-block">
+                        <label for="cafe" class="add-name-label">Café name</label>
+                        <input type="text" id="cafe" class="add-name-input" placeholder="Name" autocomplete="off"
+                            required />
+                    </div>
+                    <button type="button" class="add-log-btn" id="submit-btn">Log café</button>
                 </div>
-
-                <button type="submit" class="submit-button" id="submit-btn">Log Café</button>
             </form>
-
-            <!-- Comparison Section -->
-            <div class="comparison-section" id="comparison-section">
-                <div class="comparison-header">
-                    <h2>Which do you prefer?</h2>
+            <div class="comparison-wrap-inner">
+                <div class="comparison-section" id="comparison-section">
+                    <div class="comparison-header">
+                        <h2>Which do you prefer?</h2>
+                    </div>
+                    <div id="comparison-content">
+                        <div class="comparison-loading">Loading cafes for comparison...</div>
+                    </div>
+                    <div class="comparison-progress" id="comparison-progress"></div>
                 </div>
-                <div id="comparison-content">
-                    <div class="comparison-loading">Loading cafes for comparison...</div>
-                </div>
-                <div class="comparison-progress" id="comparison-progress"></div>
             </div>
         </div>
     </div>
 
+    <div id="password-modal" class="password-modal" aria-hidden="true">
+        <div class="password-modal-backdrop" id="password-modal-backdrop" tabindex="-1"></div>
+        <div class="password-modal-panel" role="dialog" aria-modal="true" aria-labelledby="pwd-modal-title">
+            <h2 id="pwd-modal-title" class="password-modal-title">Upload password</h2>
+            <p class="password-modal-sub">Required to log this café.</p>
+            <div class="password-modal-field">
+                <div class="password-wrapper">
+                    <input type="password" id="upload-password" placeholder="Password" autocomplete="current-password" />
+                    <button type="button" class="password-toggle" id="password-toggle"
+                        aria-label="Toggle password visibility">
+                        <span id="toggle-icon">👁️</span>
+                    </button>
+                </div>
+            </div>
+            <div class="password-modal-actions">
+                <button type="button" class="password-modal-cancel" id="password-modal-cancel">Cancel</button>
+                <button type="button" class="password-modal-confirm" id="password-modal-confirm">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="chrome-footer">
+        <div class="chrome-footer-track">
+            <div class="chrome-footer-left">
+                <button type="button" class="chrome-footer-btn" data-watchlist-open aria-label="Watchlist">
+                    <svg class="chrome-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M6 2h12a1 1 0 011 1v19l-7-4-7 4V3a1 1 0 011-1z" />
+                    </svg>
+                </button>
+            </div>
+            <div class="chrome-footer-fab-wrap">
+                <a href="index.html" class="chrome-fab-add" aria-label="Gallery">
+                    <svg class="chrome-nav-icon chrome-fab-add-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1.25" />
+                        <rect x="14" y="3.5" width="6.5" height="6.5" rx="1.25" />
+                        <rect x="3.5" y="14" width="6.5" height="6.5" rx="1.25" />
+                        <rect x="14" y="14" width="6.5" height="6.5" rx="1.25" />
+                    </svg>
+                </a>
+            </div>
+            <div class="chrome-footer-right">
+                <a href="map.html" class="chrome-nav-a" aria-label="Map view">
+                    <svg class="chrome-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 21s7-4.5 7-11a7 7 0 10-14 0c0 6.5 7 11 7 11z" />
+                        <circle cx="12" cy="10" r="2" fill="currentColor" stroke="none" />
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="chrome.js"></script>
     <script src="api-config.js"></script>
     <script>
         const C = window.CafeHopConfig || {};
@@ -925,7 +995,7 @@
                 const jpgFile = storedJpgFile;
                 const originalFile = storedOriginalFile || document.getElementById("photo").files[0];
                 const cafeName = storedFormData?.cafeName || document.getElementById("cafe").value.trim();
-                const notes = storedFormData?.notes || document.getElementById("notes").value.trim();
+                const notes = '';
                 const password = storedFormData?.password || document.getElementById("upload-password").value;
 
                 if (!jpgFile) {
@@ -1009,7 +1079,10 @@
 
                 alert("Uploaded successfully!");
                 document.getElementById('cafe-form').reset();
-                document.getElementById('cafe-form').style.display = 'block';
+                document.getElementById('add-main').style.display = 'flex';
+                const pwdEl = document.getElementById('upload-password');
+                if (pwdEl) pwdEl.value = '';
+                closePasswordModal();
                 document.getElementById('file-preview').innerHTML = '';
                 document.getElementById('comparison-section').classList.remove('active');
                 document.getElementById('comparison-content').innerHTML = '<div class="comparison-loading">Loading cafes for comparison...</div>';
@@ -1028,40 +1101,82 @@
                 const btn = document.getElementById('submit-btn');
                 if (btn) {
                     btn.disabled = false;
-                    btn.textContent = 'Log Café';
+                    btn.textContent = 'Log café';
                 }
             }
         }
 
-        // --- 9. Handle form submission ---
-        document.getElementById('cafe-form').addEventListener('submit', async function (e) {
+        const passwordModalEl = document.getElementById('password-modal');
+
+        function openPasswordModal() {
+            if (!passwordModalEl) return;
+            passwordModalEl.classList.add('is-open');
+            passwordModalEl.setAttribute('aria-hidden', 'false');
+            const pwd = document.getElementById('upload-password');
+            if (pwd) {
+                pwd.value = '';
+                setTimeout(function () { pwd.focus(); }, 40);
+            }
+        }
+
+        function closePasswordModal() {
+            if (!passwordModalEl) return;
+            passwordModalEl.classList.remove('is-open');
+            passwordModalEl.setAttribute('aria-hidden', 'true');
+        }
+
+        (function bindPasswordModalChrome() {
+            const bd = document.getElementById('password-modal-backdrop');
+            const cancel = document.getElementById('password-modal-cancel');
+            const pwdInput = document.getElementById('upload-password');
+            if (bd) bd.addEventListener('click', closePasswordModal);
+            if (cancel) cancel.addEventListener('click', closePasswordModal);
+            if (pwdInput) {
+                pwdInput.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        document.getElementById('password-modal-confirm').click();
+                    }
+                });
+            }
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && passwordModalEl && passwordModalEl.classList.contains('is-open')) {
+                    closePasswordModal();
+                }
+            });
+        })();
+
+        document.getElementById('cafe-form').addEventListener('submit', function (e) {
             e.preventDefault();
+        });
 
-            const file = document.getElementById("photo").files[0];
-            const submitBtn = document.getElementById('submit-btn');
-            const cafeName = document.getElementById("cafe").value.trim();
-            const password = document.getElementById("upload-password").value;
-
-            if (!file || !cafeName || !password) {
-                alert("Please select a photo, enter a café name, and provide the upload password.");
+        document.getElementById('submit-btn').addEventListener('click', function () {
+            const file = document.getElementById('photo').files[0];
+            const cafeName = document.getElementById('cafe').value.trim();
+            if (!file || !cafeName) {
+                alert('Please add a photo and a café name.');
                 return;
             }
+            openPasswordModal();
+        });
 
-            // Store original file for GPS extraction
+        document.getElementById('password-modal-confirm').addEventListener('click', async function () {
+            const password = document.getElementById('upload-password').value.trim();
+            if (!password) {
+                alert('Please enter the upload password.');
+                return;
+            }
+            closePasswordModal();
+
+            const file = document.getElementById('photo').files[0];
+            const submitBtn = document.getElementById('submit-btn');
+            const cafeName = document.getElementById('cafe').value.trim();
+
             storedOriginalFile = file;
-
-            const notes = document.getElementById("notes").value.trim();
-
-            // Extract GPS to get neighborhood
             const gpsData = await getGPSFromFile(file);
             let neighborhood = null;
-
-            // Try to get neighborhood from GPS (this would need to be computed, but for now we'll leave it null)
-            // The neighborhood will be computed server-side when uploading
-
             storedFormData = {
                 cafeName: cafeName,
-                notes: notes,
                 password: password,
                 neighborhood: neighborhood
             };
@@ -1070,26 +1185,20 @@
             submitBtn.textContent = 'Converting image...';
 
             try {
-                // --- 1. Get token if not already ---
                 if (!token) {
                     token = await getToken(password);
                 }
 
-                // --- 2. Convert image to JPG immediately and store it ---
                 try {
                     storedJpgFile = await convertToJPG(file);
                 } catch (conversionError) {
-                    // Check if it's a HEIC file
                     const fileName = file.name.toLowerCase();
                     const isHeic = file.type === 'image/heic' || file.type === 'image/heif' ||
                         fileName.endsWith('.heic') || fileName.endsWith('.heif');
 
-                    // If conversion fails, try to use original file as fallback
                     if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
                         storedJpgFile = file;
                     } else if (isHeic) {
-                        // Do not upload raw HEIC: S3 key is still *.jpg and the thumbnail Lambda often
-                        // cannot decode HEIC (Chrome/Firefox canvas path fails first).
                         alert(
                             'Could not convert this HEIC photo in your browser.\n\n' +
                             'Fix: open this page in Safari (Mac/iPhone), or in Photos use Share → Save as JPEG, then upload that file.'
@@ -1101,25 +1210,21 @@
                     }
                 }
 
-                // --- 3. Fetch random cafes for comparison ---
                 submitBtn.textContent = 'Loading comparisons...';
                 comparisonCafes = await fetchRandomCafes(5);
                 currentComparisonIndex = 0;
                 comparisonResults = [];
 
                 if (comparisonCafes.length === 0) {
-                    // No cafes to compare, show comparison section with loading and proceed to upload
-                    document.getElementById('cafe-form').style.display = 'none';
+                    document.getElementById('add-main').style.display = 'none';
                     document.getElementById('comparison-section').classList.add('active');
                     proceedWithUpload();
                     return;
                 }
 
-                // --- 3. Show comparison section ---
-                document.getElementById('cafe-form').style.display = 'none';
+                document.getElementById('add-main').style.display = 'none';
                 document.getElementById('comparison-section').classList.add('active');
 
-                // --- 4. Display first comparison ---
                 displayComparison(
                     cafeName,
                     storedFormData.neighborhood,
@@ -1127,10 +1232,10 @@
                 );
 
             } catch (error) {
-                alert("Error: " + error.message);
+                alert('Error: ' + error.message);
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Log Café';
+                submitBtn.textContent = 'Log café';
             }
         });
 

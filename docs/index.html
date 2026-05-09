@@ -3,18 +3,36 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>The Cup Schema</title>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&display=swap"
-        rel="stylesheet">
+    <link rel="stylesheet" href="chrome.css">
     <style>
+        /* Warm palette inspired by cup_schema_redesign — used across gallery + chrome fallbacks */
+        :root {
+            --schema-bg: #fdfbf8;
+            --schema-surface: #ffffff;
+            --schema-bg-secondary: #f5ede3;
+            --schema-text-primary: #1f1b16;
+            --schema-text-secondary: #5e564d;
+            --schema-text-tertiary: #8a8279;
+            --schema-accent: #a37b55;
+            --schema-accent-soft: #d3c5b5;
+            --schema-border: rgba(43, 26, 14, 0.14);
+            --schema-border-secondary: rgba(44, 26, 14, 0.1);
+            --schema-border-tertiary: rgba(44, 26, 14, 0.08);
+            --schema-inverted: #2c1a0e;
+            --schema-inverted-fg: #f5ede3;
+            --schema-radius-lg: 12px;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -23,26 +41,11 @@
 
         body {
             font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #ffffff;
+            background: var(--schema-bg);
             padding: 0;
             margin: 0;
-            color: rgba(0, 0, 0, 0.87);
+            color: var(--schema-text-primary);
             user-select: none;
-        }
-
-        .header {
-            text-align: center;
-            width: 100%;
-            padding: 2.25rem 2rem;
-            background: #000000;
-            border-radius: 0;
-            color: white;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 0.55rem;
         }
 
         .content-wrapper {
@@ -50,123 +53,16 @@
             margin-top: 0;
         }
 
-        .header-content {
-            position: relative;
-            z-index: 1;
-        }
-
-        .header h1 {
-            font-family: 'Anton', sans-serif;
-            user-select: none !important;
-            /* Prevent text selection globally */
-            -webkit-user-select: none !important;
-            /* For Safari and iOS */
-            font-size: 4rem;
-            font-weight: 400;
-            margin: 0;
-            letter-spacing: 0.02em;
-            color: white;
-            position: relative;
-            text-transform: uppercase;
-            display: inline-flex;
-            align-items: center;
-            gap: 0rem;
-        }
-
-        .header-title-icon {
-            width: 40px;
-            height: 40px;
-            object-fit: contain;
-        }
-
-        .header .subtitle {
-            font-family: 'Courier New', 'Courier', 'Monaco', 'Menlo', monospace;
-            user-select: none !important;
-            /* Prevent text selection globally */
-            -webkit-user-select: none !important;
-            /* For Safari and iOS */
-            font-size: 0.875rem;
-            font-weight: 400;
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-            color: rgba(255, 255, 255, 0.7);
-            margin-top: 0.15rem;
-        }
-
-        .nav-buttons {
-            display: flex;
-            user-select: none !important;
-            /* Prevent text selection globally */
-            -webkit-user-select: none !important;
-            /* For Safari and iOS */
-            justify-content: center;
-            gap: 0.5rem;
-            margin-top: 0.35rem;
-            margin-bottom: 0.35rem;
-            position: relative;
-            z-index: 1;
-        }
-
-        .nav-button {
-            padding: 0.625rem 1.5rem;
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 0.875rem;
-            font-weight: 500;
-            border: none;
-            border-radius: 2px;
-            background-color: rgba(255, 255, 255, 0.12);
-            color: white;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-            text-decoration: none;
-            display: inline-block;
-            text-transform: uppercase;
-            letter-spacing: 0.0892857143em;
-        }
-
-        .nav-button:hover {
-            background-color: rgba(255, 255, 255, 0.16);
-        }
-
-        .nav-button.active {
-            background-color: rgba(255, 255, 255, 0.24);
-        }
-
         .toggle-container {
             display: flex;
             justify-content: flex-start;
             align-items: center;
             gap: 1rem;
-            padding: 0 1.5rem;
-            margin: 1.25rem 0 0 0;
+            padding: 10px max(16px, env(safe-area-inset-left)) 6px max(16px, env(safe-area-inset-right));
+            margin: 0;
             position: relative;
             z-index: 1;
-        }
-
-        .sort-toggle {
-            position: absolute;
-            user-select: none !important;
-            /* Prevent text selection globally */
-            -webkit-user-select: none !important;
-            /* For Safari and iOS */
-            top: 0.7rem;
-            right: 0.7rem;
-            padding: 0.25rem 0.25rem;
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 0.7rem;
-            font-weight: 500;
-            border-radius: 999px;
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            background-color: rgba(0, 0, 0, 0.4);
-            color: white;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 0.09em;
-            z-index: 2;
-        }
-
-        .sort-toggle:hover {
-            background-color: rgba(255, 255, 255, 0.08);
+            background: var(--schema-bg);
         }
 
         .filter-wrapper {
@@ -174,9 +70,9 @@
             align-items: center;
             gap: 0.35rem;
             font-family: 'Space Grotesk', sans-serif;
-            font-size: 0.85rem;
-            color: rgba(0, 0, 0, 0.85);
-            letter-spacing: 0.08em;
+            font-size: 0.8125rem;
+            color: var(--schema-text-secondary);
+            letter-spacing: 0.06em;
         }
 
         .filter-label {
@@ -201,15 +97,13 @@
             -webkit-appearance: none;
             -moz-appearance: none;
             appearance: none;
-            padding: 0.1rem 0.9rem 0.05rem 0.35rem;
-            border-radius: 0;
-            border: none;
-            border-bottom: 0.5px solid rgba(0, 0, 0, 0.4);
-            background-color: transparent;
-            color: inherit;
+            padding: 0.35rem 1.75rem 0.35rem 0.75rem;
+            border-radius: 20px;
+            border: 0.5px solid var(--schema-border-secondary);
+            background-color: var(--schema-bg);
+            color: var(--schema-text-secondary);
             cursor: pointer;
             outline: none;
-            opacity: 0.85;
         }
 
         .filter-arrow {
@@ -226,10 +120,10 @@
 
         .gallery {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            /* Use the same spacing between cards and at the edges */
-            gap: 1.5rem;
-            padding: 1.5rem;
+            /* Always at least two cards per row */
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+            padding: 6px max(16px, env(safe-area-inset-left)) 20px max(16px, env(safe-area-inset-right));
             margin-top: 0;
         }
 
@@ -241,14 +135,20 @@
         }
 
         .cafe-card {
-            background: white;
-            border-radius: 0;
+            background: var(--schema-bg);
+            border: 0.4px solid var(--schema-border);
+            border-radius: var(--schema-radius-lg);
             overflow: hidden;
-            transition: transform 0.2s ease;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
             position: relative;
             cursor: default;
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
+        }
+
+        .cafe-card:hover {
+            border-color: var(--schema-accent);
+            box-shadow: 0 1px 0 rgba(163, 123, 85, 0.25);
         }
 
         .cafe-image-container {
@@ -258,40 +158,20 @@
             -webkit-user-select: none !important;
             /* For Safari and iOS */
             width: 100%;
-            height: 250px;
+            height: 228px;
             contain: layout style paint;
+            border-radius: var(--schema-radius-lg) var(--schema-radius-lg) 0 0;
+            overflow: hidden;
         }
 
         .cafe-image {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            border-radius: 0;
+            box-shadow: none;
             filter: contrast(1.05) saturate(1.05);
             transition: filter 0.3s ease;
-        }
-
-
-        .stars-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            transition: opacity 0.15s ease;
-            color: gold;
-            font-size: 2rem;
-            gap: 0.5rem;
-            padding: 1rem;
-            will-change: opacity;
-            backface-visibility: hidden;
-            transform: translateZ(0);
         }
 
         .cups-container {
@@ -326,23 +206,56 @@
             clip-path: inset(50% 0 0 0);
         }
 
-        @media (hover: hover) and (pointer: fine) {
-
-            /* Hover only on devices that support it (desktop) */
-            .cafe-image-container:hover .stars-overlay {
-                opacity: 1;
-            }
-
-            /* NEW: if you're over the share button, don't show overlay */
-            .cafe-image-container:has(.cafe-share-button:hover) .stars-overlay,
-            .cafe-image-container:has(.cafe-share-button:focus-visible) .stars-overlay,
-            .cafe-image-container:has(.cafe-share-button:active) .stars-overlay {
-                opacity: 0 !important;
-            }
+        .cafe-card-text {
+            background: var(--schema-bg);
+            padding: 14px 16px 14px;
+            text-align: left;
         }
 
-        .cafe-image-container.show-stars .stars-overlay {
-            opacity: 1;
+        .cafe-card-body-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .cafe-card-meta {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .cafe-name-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 3px;
+        }
+
+        .cafe-type-emoji {
+            font-size: 1.125rem;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        .cafe-card-rating {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 2px;
+        }
+
+        .cafe-rating-cups {
+            justify-content: flex-end;
+            align-items: center;
+            gap: 4px;
+            flex-wrap: nowrap;
+        }
+
+        .cafe-rating-cups .cup-icon {
+            width: 1.55rem;
+            height: 1.55rem;
         }
 
         .cafe-name {
@@ -350,33 +263,16 @@
             /* Prevent text selection globally */
             -webkit-user-select: none !important;
             /* For Safari and iOS */
-            padding: 0.6rem 0rem 0rem 0rem;
-            font-size: 1.4rem;
-            text-align: center;
-            color: #000000;
-            font-family: 'Space Grotesk', sans-serif;
-            background-color: white;
-        }
-
-        .cafe-name.cafe-name-small {
-            font-size: 1.1rem;
-        }
-
-        .cafe-notes {
-            user-select: none !important;
-            /* Prevent text selection globally */
-            -webkit-user-select: none !important;
-            /* For Safari and iOS */
-            font-family: 'Dancing Script', 'Brush Script MT', cursive;
+            padding: 0;
+            margin: 0;
             font-size: 1rem;
-            color: rgba(255, 255, 255, 0.9);
-            text-align: center;
-            padding: 0.5rem 1rem 0 1rem;
-            font-style: italic;
-            line-height: 1.4;
-            max-width: 100%;
-            word-wrap: break-word;
-            will-change: contents;
+            font-weight: 500;
+            text-align: left;
+            color: var(--schema-text-primary);
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: transparent;
+            letter-spacing: -0.02em;
+            min-width: 0;
         }
 
         .cafe-neighborhood {
@@ -385,19 +281,16 @@
             -webkit-user-select: none !important;
             /* For Safari and iOS */
             font-family: 'Space Grotesk', sans-serif;
-            font-size: 0.78rem;
-            letter-spacing: 0.16em;
-            text-transform: uppercase;
-            color: rgba(0, 0, 0, 0.398);
-            text-align: center;
-            padding: 0 1rem 0 1rem;
-
+            font-size: 0.75rem;
+            letter-spacing: 0;
+            text-transform: none;
+            color: var(--schema-text-secondary);
+            text-align: left;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
-
-        /* .cafe-neighborhood::before {
-            content: "📍 ";
-            opacity: 0.9;
-        } */
 
         .cafe-subway-icons {
             position: absolute;
@@ -405,42 +298,17 @@
             /* Prevent text selection globally */
             -webkit-user-select: none !important;
             /* For Safari and iOS */
-            bottom: 0.5rem;
-            right: 0.5rem;
+            top: 10px;
+            right: 10px;
+            bottom: auto;
+            left: auto;
             display: flex;
             justify-content: flex-end;
             align-items: center;
-            gap: 0.25rem;
+            gap: 5px;
             flex-wrap: wrap;
-            z-index: 2;
-        }
-
-        .cafe-place-type-icon {
-            position: absolute;
-            user-select: none !important;
-            /* Prevent text selection globally */
-            -webkit-user-select: none !important;
-            /* For Safari and iOS */
-            top: 0.5rem;
-            left: 0.5rem;
-            font-size: 24px;
-            z-index: 3;
-            line-height: 1;
-        }
-
-        .bike-info {
-            position: absolute;
-            bottom: 0.5rem;
-            left: 0.5rem;
-            background: rgba(0, 0, 0, 0.6);
-            color: white;
-            font-size: 0.85rem;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-family: 'Space Grotesk', sans-serif;
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
+            max-width: calc(100% - 48px);
+            z-index: 8;
         }
 
         .cafe-share-button {
@@ -449,51 +317,49 @@
             /* Prevent text selection globally */
             -webkit-user-select: none !important;
             /* For Safari and iOS */
-            top: 0.5rem;
-            right: 0.5rem;
-            width: 22px;
-            height: 22px;
+            top: 8px;
+            left: 8px;
+            right: auto;
+            width: 28px;
+            height: 28px;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.92);
             border-radius: 50%;
-            border: none;
+            border: 0.5px solid var(--schema-border-secondary);
             cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            transition: background-color 0.2s ease, transform 0.1s ease;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+            transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
             flex-shrink: 0;
             padding: 0;
             text-decoration: none;
-            color: rgba(0, 0, 0, 0.85);
-            font-size: 14px;
-            z-index: 3;
+            color: var(--schema-text-secondary);
+            font-size: 12px;
+            z-index: 9;
             touch-action: manipulation;
         }
 
         .cafe-share-button::before {
             content: '';
             position: absolute;
-            top: -11px;
-            /* Expand the hitbox */
-            left: -11px;
+            top: -8px;
+            left: -8px;
             width: 44px;
-            /* Minimum recommended touch target size */
             height: 44px;
-            /* Minimum recommended touch target size */
             background: transparent;
-            /* Invisible hitbox */
             z-index: -1;
-            /* Keep it behind the button */
         }
 
         .cafe-share-button:hover {
-            background: rgba(255, 255, 255, 1);
-            transform: scale(1.05);
+            background: var(--schema-bg-secondary);
+            color: var(--schema-text-primary);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            transform: scale(1.03);
         }
 
         .cafe-share-button:active {
-            transform: scale(0.95);
+            transform: scale(0.97);
         }
 
         .cafe-share-button svg {
@@ -502,15 +368,11 @@
             fill: currentColor;
         }
 
-        .cafe-share-button:active~.stars-overlay {
-            opacity: 0 !important;
-        }
-
         .cafe-pin {
             text-decoration: none !important;
-            color: black;
-            font-size: 0.78rem;
-            opacity: 0.8;
+            color: var(--schema-accent);
+            font-size: 0.6875rem;
+            opacity: 0.95;
             cursor: pointer;
             transition: opacity 0.2s ease, transform 0.1s ease;
         }
@@ -546,16 +408,11 @@
         }
 
         .loading {
+            grid-column: 1 / -1;
             text-align: center;
             padding: 2rem;
             font-size: 1.25rem;
-            color: #4a5568;
-        }
-
-        .star {
-            color: gold;
-            font-size: 24px;
-            margin: 0 2px;
+            color: var(--schema-text-secondary);
         }
 
         @media (max-width: 768px) {
@@ -563,60 +420,22 @@
                 padding: 0;
             }
 
-            .header {
-                padding: 2rem 1.5rem;
-                margin-bottom: 0;
-            }
-
-            .header h1 {
-                font-size: 2.25rem;
-            }
-
-            .header h1::after {
-                margin-left: 0.5rem;
-                font-size: 1.75rem;
-            }
-
-            .header .subtitle {
-                font-size: 0.9rem;
-                letter-spacing: 0.1em;
-            }
-
-            .nav-buttons {
-                flex-wrap: wrap;
-                gap: 0.5rem;
-            }
-
-            .nav-button {
-                padding: 0.55rem 1rem;
-                font-size: 0.85rem;
-            }
-
             .gallery {
-                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-                gap: 1rem;
-                padding: 1rem;
-                margin-top: 0;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
+                padding: 4px max(12px, env(safe-area-inset-left)) 16px max(12px, env(safe-area-inset-right));
             }
         }
     </style>
 </head>
 
-<body>
-    <div class="header">
-        <div class="header-content">
-            <h1>
-                The Cup Schema
-                <img src="coffeecup2.png" alt="Coffee cup" class="header-title-icon">
-            </h1>
-            <p class="subtitle">Azam's NYC Coffee Dataset</p>
+<body class="has-chrome" data-chrome-page="gallery">
+    <header class="chrome-header">
+        <div class="chrome-header-inner">
+            <a href="index.html" class="chrome-brand">Cup <span class="chrome-brand-accent">Schema</span></a>
+            <button type="button" class="chrome-sort" id="toggle-sort">RATING</button>
         </div>
-        <div class="nav-buttons">
-            <a href="map.html" class="nav-button">Map View</a>
-            <a href="add.html" class="nav-button">Add Café</a>
-        </div>
-        <button class="sort-toggle" id="toggle-sort">RATING</button>
-    </div>
+    </header>
 
     <div class="toggle-container">
         <div class="filter-wrapper">
@@ -636,7 +455,30 @@
         </div>
     </div>
 
-    <!-- SVG Sprite for subway icons will be loaded here -->
+    <footer class="chrome-footer">
+        <div class="chrome-footer-track">
+            <div class="chrome-footer-left">
+                <button type="button" class="chrome-footer-btn" data-watchlist-open aria-label="Watchlist">
+                    <svg class="chrome-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M6 2h12a1 1 0 011 1v19l-7-4-7 4V3a1 1 0 011-1z" />
+                    </svg>
+                </button>
+            </div>
+            <div class="chrome-footer-fab-wrap">
+                <a href="add.html" class="chrome-fab-add" aria-label="Add café">+</a>
+            </div>
+            <div class="chrome-footer-right">
+                <a href="map.html" class="chrome-nav-a" aria-label="Map view">
+                    <svg class="chrome-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 21s7-4.5 7-11a7 7 0 10-14 0c0 6.5 7 11 7 11z" />
+                        <circle cx="12" cy="10" r="2" fill="currentColor" stroke="none" />
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </footer>
 
     <!-- Load SVG sprite for subway icons and coffee cup -->
     <script>
@@ -709,12 +551,14 @@
         })();
     </script>
 
+    <script src="chrome.js"></script>
     <script src="api-config.js"></script>
     <script>
         const C = window.CafeHopConfig || {};
         const BUCKET_URL = (C.bucketUrl || '').replace(/\/$/, '');
         const CAFE_API_URL = (C.cafeUrl || '').replace(/\/$/, '');
         let currentSort = 'rating'; // Default sort by ELO rating
+        let watchlistOnlyMode = false;
         let currentNeighborhoodFilter = 'all';
         let cachedCafes = null; // Cache cafes in memory so sort/filter don't refetch
         let cachedSortedCafes = null; // Cache sorted cafes to avoid re-sorting
@@ -929,12 +773,19 @@
 
                 // Sort cafes based on current sort mode (with caching)
                 let sortedCafes;
-                const sortKey = `${currentSort}-${filterKey}`;
+                const sortKey = `${currentSort}-${filterKey}-wl:${watchlistOnlyMode ? '1' : '0'}`;
                 if (cachedSortedCafes && cachedSortedCafes.sortKey === sortKey) {
                     sortedCafes = cachedSortedCafes.cafes;
                 } else {
                     sortedCafes = currentSort === 'name' ? sortByName(filteredCafes) : sortByEloRating(filteredCafes);
                     cachedSortedCafes = { sortKey, cafes: sortedCafes };
+                }
+
+                if (watchlistOnlyMode && window.CafeHopWatchlist) {
+                    const wlIds = new Set(window.CafeHopWatchlist.loadList().map(function (x) { return x.id; }));
+                    sortedCafes = sortedCafes.filter(function (c) {
+                        return wlIds.has(window.CafeHopWatchlist.cafeId(c));
+                    });
                 }
 
                 // First batch of cards only (rest on scroll) so fewer images compete on open
@@ -1063,18 +914,10 @@
             const card = document.createElement('div');
             card.className = 'cafe-card visited';
 
-            const notesHtml = cafe.notes
-                ? `<div class="cafe-notes">${escapeHtml(cafe.notes)}</div>`
+            const cupsInner = generateStars(cafe.stars);
+            const ratingColumnHtml = cupsInner
+                ? `<div class="cafe-card-rating"><div class="cups-container cafe-rating-cups">${cupsInner}</div></div>`
                 : '';
-
-            const starsHtml = `
-                <div class="stars-overlay">
-                    <div class="cups-container">
-                        ${generateStars(cafe.stars)}
-                    </div>
-                    ${notesHtml}
-                </div>
-            `;
 
             const gmUrl = safeHttpUrl(cafe.google_maps_link);
             const neighborhoodHtml = cafe.neighborhood
@@ -1087,12 +930,12 @@
 
             const subwayIconsHtml = generateSubwayIcons(cafe.subwayRoutes);
 
-            let placeTypeIconHtml = '';
+            let placeTypeEmojiHtml = '';
             const ptype = String(cafe.google_maps_place_type || '').toLowerCase();
             if (ptype === 'bakery') {
-                placeTypeIconHtml = `<div class="cafe-place-type-icon">🥐</div>`;
+                placeTypeEmojiHtml = '<span class="cafe-type-emoji" aria-hidden="true">🥐</span>';
             } else if (/^[a-z_]+$/.test(ptype) && ptype.length >= 2 && ptype.length <= 64) {
-                placeTypeIconHtml = `<div class="cafe-place-type-icon">☕</div>`;
+                placeTypeEmojiHtml = '<span class="cafe-type-emoji" aria-hidden="true">☕</span>';
             }
 
             // Full S3 object for cards; thumbnailUrl is often mapThumbnails/* (~150px JPEG for the map).
@@ -1102,22 +945,30 @@
             card.innerHTML = `
                 <div class="cafe-image-container">
                     <img class="cafe-image" src="${escapeHtml(imageSrc)}" alt="${escapeHtml(cafe.name)}" loading="${loadingAttr}"${fetchPriorityAttr}>
-                    ${starsHtml}
-                    ${placeTypeIconHtml}
                     ${subwayIconsHtml}
                 </div>
-                <div class="cafe-name">${escapeHtml(cafe.name)}</div>
-                ${neighborhoodHtml}
+                <div class="cafe-card-text">
+                    <div class="cafe-card-body-row">
+                        <div class="cafe-card-meta">
+                            <div class="cafe-name-row">
+                                ${placeTypeEmojiHtml}
+                                <div class="cafe-name">${escapeHtml(cafe.name)}</div>
+                            </div>
+                            ${neighborhoodHtml}
+                        </div>
+                        ${ratingColumnHtml}
+                    </div>
+                </div>
             `;
 
             const imageContainer = card.querySelector('.cafe-image-container');
             const sharePng = safeHttpUrl(cafe.shareCardPngUrl);
-            if (sharePng && navigator.share) {
+            if (sharePng) {
                 const shareBtn = document.createElement('button');
                 shareBtn.type = 'button';
                 shareBtn.className = 'cafe-share-button';
-                shareBtn.title = 'Share Cafe';
-                shareBtn.setAttribute('aria-label', 'Share cafe');
+                shareBtn.title = 'Download share card';
+                shareBtn.setAttribute('aria-label', 'Download share card image');
                 shareBtn.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                             <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/>
                         </svg>`;
@@ -1129,48 +980,6 @@
                     shareImage(sharePng, cafe.name);
                 });
                 imageContainer.appendChild(shareBtn);
-            }
-
-            // Add click/tap handler to toggle stars overlay on touch devices
-            let touchStartTime = 0;
-            let touchStartY = 0;
-
-            imageContainer.addEventListener('touchstart', function (e) {
-                touchStartTime = Date.now();
-                touchStartY = e.touches[0].clientY;
-            }, { passive: true });
-
-            imageContainer.addEventListener('touchend', function (e) {
-                const touchEndTime = Date.now();
-                const touchEndY = e.changedTouches[0].clientY;
-                const touchDuration = touchEndTime - touchStartTime;
-                const touchDistance = Math.abs(touchEndY - touchStartY);
-
-                // Only trigger if it's a quick tap (not a swipe or long press)
-                if (touchDuration < 300 && touchDistance < 10) {
-                    e.preventDefault();
-                    toggleStars(imageContainer);
-                }
-            });
-
-            imageContainer.addEventListener('click', function (e) {
-                // For mouse clicks on desktop
-                toggleStars(imageContainer);
-            });
-
-            function toggleStars(cardElement) {
-                // Check if this card is already showing stars
-                const isShowing = cardElement.classList.contains('show-stars');
-
-                // Close all cards first
-                document.querySelectorAll('.cafe-image-container').forEach(c => {
-                    c.classList.remove('show-stars');
-                });
-
-                // If this card wasn't showing, open it; otherwise leave it closed
-                if (!isShowing) {
-                    cardElement.classList.add('show-stars');
-                }
             }
 
             return card;
@@ -1201,6 +1010,25 @@
                 loadImages();
             });
         }
+
+        window.__cafeHopWatchlistOnly = false;
+        document.addEventListener('cafehop-watchlist-only', function (e) {
+            watchlistOnlyMode = Boolean(e.detail && e.detail.only);
+            window.__cafeHopWatchlistOnly = watchlistOnlyMode;
+            cachedSortedCafes = null;
+            loadImages();
+        });
+        document.addEventListener('cafehop-watchlist-changed', function () {
+            cachedSortedCafes = null;
+            loadImages();
+        });
+
+        try {
+            if (new URLSearchParams(location.search).get('watchlist') === '1') {
+                watchlistOnlyMode = true;
+                window.__cafeHopWatchlistOnly = true;
+            }
+        } catch (_) { /* ignore */ }
 
         // Load images when page loads
         document.addEventListener('DOMContentLoaded', loadImages);

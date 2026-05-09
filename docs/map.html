@@ -3,21 +3,25 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#fdfbf8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>The Cup Schema - Azam's NYC Coffee Dataset</title>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&display=swap"
-        rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="chrome.css">
     <script src="https://cdn.jsdelivr.net/npm/exif-js@2.3.0/exif.js"></script>
     <style>
+        :root {
+            --schema-bg: #fdfbf8;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -26,101 +30,25 @@
 
         body {
             font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #fafafa;
+            background: var(--schema-bg);
             padding: 0;
             margin: 0;
             color: rgba(0, 0, 0, 0.87);
         }
 
-        .header {
-            text-align: center;
-            width: 100%;
-            padding: 2.25rem 2rem;
-            background: #000000;
-            /* match gallery page header */
-            border-radius: 0;
-            color: white;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 0.55rem;
+        /* Map fills to bottom; footer overlays — no reserved strip below the map */
+        body.has-chrome[data-chrome-page="map"] {
+            padding-bottom: 0;
         }
 
-        .header-content {
-            position: relative;
-            z-index: 1;
-        }
-
-        .header h1 {
-            font-family: 'Anton', sans-serif;
-            font-size: 4rem;
-            font-weight: 400;
-            margin: 0;
-            letter-spacing: 0.02em;
-            color: white;
-            position: relative;
-            text-transform: uppercase;
-            display: inline-flex;
-            align-items: center;
-            gap: 0rem;
-        }
-
-        .header-title-icon {
-            width: 40px;
-            height: 40px;
-            object-fit: contain;
-        }
-
-        .header .subtitle {
-            font-family: 'Courier New', 'Courier', 'Monaco', 'Menlo', monospace;
-            font-size: 0.875rem;
-            font-weight: 400;
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-            color: rgba(255, 255, 255, 0.7);
-            margin-top: 0.15rem;
-        }
-
-        .nav-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 0.5rem;
-            margin-top: 0.35rem;
-            margin-bottom: 0.35rem;
-            position: relative;
-            z-index: 1;
-        }
-
-        .nav-button {
-            padding: 0.625rem 1.5rem;
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 0.875rem;
-            font-weight: 500;
-            border: none;
-            border-radius: 2px;
-            background-color: rgba(255, 255, 255, 0.12);
-            color: white;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-            text-decoration: none;
-            display: inline-block;
-            text-transform: uppercase;
-            letter-spacing: 0.0892857143em;
-        }
-
-        .nav-button:hover {
-            background-color: rgba(255, 255, 255, 0.16);
-        }
-
-        .nav-button.active {
-            background-color: rgba(255, 255, 255, 0.24);
-        }
-
-        .map-container {
-            height: calc(100vh - 200px);
-            position: relative;
+        .map-container.map-with-chrome {
+            position: fixed;
+            top: calc(var(--chrome-header-h) + var(--chrome-header-pad-top) + 6px);
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: auto;
+            z-index: 0;
         }
 
         #map {
@@ -141,13 +69,15 @@
 
         .legend {
             position: absolute;
-            bottom: 20px;
-            right: 20px;
+            bottom: calc(var(--chrome-footer-total) + 4px + env(safe-area-inset-bottom, 0px));
+            right: max(12px, env(safe-area-inset-right, 0px));
             background: white;
-            padding: 0.5rem;
-            border-radius: 6px;
+            padding: 0.45rem 0.5rem;
+            border-radius: 8px;
             z-index: 1000;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+            max-width: min(42vw, 140px);
         }
 
         .legend-item {
@@ -220,69 +150,29 @@
         }
 
         @media (max-width: 768px) {
-            .header {
-                padding: 2rem 1.5rem;
-            }
-
-            .header h1 {
-                font-size: 2.25rem;
-            }
-
-            .header h1::after {
-                margin-left: 0.5rem;
-                font-size: 1.75rem;
-            }
-
-            .header .subtitle {
-                font-size: 0.9rem;
-                letter-spacing: 0.1em;
-            }
-
-            .nav-buttons {
-                flex-wrap: wrap;
-                gap: 0.5rem;
-            }
-
-            .nav-button {
-                padding: 0.55rem 1rem;
-                font-size: 0.85rem;
-            }
-
-            .map-container {
-                height: calc(100vh - 250px);
-            }
-
             .legend {
-                bottom: 10px;
-                right: 10px;
-                padding: 0.4rem;
-                font-size: 0.7rem;
+                bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+                right: max(8px, env(safe-area-inset-right, 0px));
+                padding: 0.35rem 0.4rem;
+                font-size: 0.65rem;
             }
 
             .legend-icon {
-                font-size: 12px;
-                margin-right: 0.3rem;
+                font-size: 11px;
+                margin-right: 0.25rem;
             }
         }
     </style>
 </head>
 
-<body>
-    <div class="header">
-        <div class="header-content">
-            <h1>
-                The Cup Schema
-                <img src="coffeecup2.png" alt="Coffee cup" class="header-title-icon">
-            </h1>
-            <p class="subtitle">Azam's NYC Coffee Dataset</p>
+<body class="has-chrome" data-chrome-page="map">
+    <header class="chrome-header">
+        <div class="chrome-header-inner">
+            <a href="index.html" class="chrome-brand">Cup <span class="chrome-brand-accent">Schema</span></a>
         </div>
-        <div class="nav-buttons">
-            <a href="index.html" class="nav-button">Gallery View</a>
-            <a href="add.html" class="nav-button">Add Café</a>
-        </div>
-    </div>
+    </header>
 
-    <div class="map-container">
+    <div class="map-container map-with-chrome">
         <div class="loading" id="loading">Loading map and fetching GPS coordinates from S3 metadata...</div>
         <div id="map"></div>
 
@@ -310,7 +200,33 @@
         </div>
     </div>
 
+    <footer class="chrome-footer">
+        <div class="chrome-footer-track">
+            <div class="chrome-footer-left">
+                <button type="button" class="chrome-footer-btn" data-watchlist-open aria-label="Watchlist">
+                    <svg class="chrome-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M6 2h12a1 1 0 011 1v19l-7-4-7 4V3a1 1 0 011-1z" />
+                    </svg>
+                </button>
+            </div>
+            <div class="chrome-footer-fab-wrap">
+                <a href="add.html" class="chrome-fab-add" aria-label="Add café">+</a>
+            </div>
+            <div class="chrome-footer-right">
+                <a href="index.html" class="chrome-nav-a" aria-label="Gallery view">
+                    <svg class="chrome-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1.25" />
+                        <rect x="14" y="3.5" width="6.5" height="6.5" rx="1.25" />
+                        <rect x="3.5" y="14" width="6.5" height="6.5" rx="1.25" />
+                        <rect x="14" y="14" width="6.5" height="6.5" rx="1.25" />
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </footer>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="chrome.js"></script>
     <script src="api-config.js"></script>
     <script>
         const C = window.CafeHopConfig || {};
@@ -426,9 +342,6 @@
             };
         }
 
-
-
-
         // Function to generate star rating HTML (supports half ratings with ½ symbol)
         function generateStars(count) {
             if (count === null || count === undefined || count === 0) {
@@ -524,6 +437,13 @@
                 subdomains: 'abcd',
                 maxZoom: 19
             }).addTo(map);
+
+            requestAnimationFrame(function () {
+                map.invalidateSize();
+            });
+            setTimeout(function () {
+                map.invalidateSize();
+            }, 280);
 
             try {
                 // Check cache first
