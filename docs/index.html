@@ -120,8 +120,7 @@
 
         .gallery {
             display: grid;
-            /* Always at least two cards per row */
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
             gap: 14px;
             padding: 6px max(16px, env(safe-area-inset-left)) 20px max(16px, env(safe-area-inset-right));
             margin-top: 0;
@@ -421,7 +420,6 @@
             }
 
             .gallery {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
                 gap: 10px;
                 padding: 4px max(12px, env(safe-area-inset-left)) 16px max(12px, env(safe-area-inset-right));
             }
