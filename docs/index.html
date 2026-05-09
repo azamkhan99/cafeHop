@@ -120,9 +120,10 @@
 
         .gallery {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-            gap: 14px;
-            padding: 6px max(16px, env(safe-area-inset-left)) 20px max(16px, env(safe-area-inset-right));
+            /* Same auto-fill min widths as pre-redesign (HEAD~2) */
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            padding: 1.5rem max(1.5rem, env(safe-area-inset-left)) 1.5rem max(1.5rem, env(safe-area-inset-right));
             margin-top: 0;
         }
 
@@ -143,6 +144,9 @@
             cursor: default;
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
+            min-width: 0;
+            width: 100%;
+            max-width: 100%;
         }
 
         .cafe-card:hover {
@@ -420,8 +424,9 @@
             }
 
             .gallery {
-                gap: 10px;
-                padding: 4px max(12px, env(safe-area-inset-left)) 16px max(12px, env(safe-area-inset-right));
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 1rem;
+                padding: 1rem max(1rem, env(safe-area-inset-left)) 1rem max(1rem, env(safe-area-inset-right));
             }
         }
     </style>
