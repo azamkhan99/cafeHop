@@ -180,7 +180,67 @@
         sheetEl.setAttribute('aria-hidden', 'true');
     }
 
+    var ICON_GALLERY =
+        '<svg class="chrome-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1.25"/>' +
+        '<rect x="14" y="3.5" width="6.5" height="6.5" rx="1.25"/>' +
+        '<rect x="3.5" y="14" width="6.5" height="6.5" rx="1.25"/>' +
+        '<rect x="14" y="14" width="6.5" height="6.5" rx="1.25"/>' +
+        '</svg>';
+
+    var ICON_WATCHLIST =
+        '<svg class="chrome-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M6 2h12a1 1 0 011 1v19l-7-4-7 4V3a1 1 0 011-1z"/>' +
+        '</svg>';
+
+    var ICON_MAP =
+        '<svg class="chrome-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M12 21s7-4.5 7-11a7 7 0 10-14 0c0 6.5 7 11 7 11z"/>' +
+        '<circle cx="12" cy="10" r="2" fill="currentColor" stroke="none"/>' +
+        '</svg>';
+
+    /** One canonical bottom nav for index / add / map (markup + active state from data-chrome-page). */
+    function ensureChromeFooter() {
+        if (!document.body.classList.contains('has-chrome')) return;
+        var old = document.querySelector('.chrome-footer');
+        if (old) old.remove();
+
+        var page = document.body.getAttribute('data-chrome-page') || '';
+        var galActive = page === 'gallery';
+        var fabActive = page === 'add';
+        var mapActive = page === 'map';
+
+        var galCls = 'chrome-nav-a chrome-nav-gallery' + (galActive ? ' is-active' : '');
+        var galExtra = galActive ? ' aria-current="page"' : '';
+        var fabCls = 'chrome-fab-add' + (fabActive ? ' is-active' : '');
+        var fabExtra = fabActive ? ' aria-current="page"' : '';
+        var mapCls = 'chrome-nav-a chrome-nav-map' + (mapActive ? ' is-active' : '');
+        var mapExtra = mapActive ? ' aria-current="page"' : '';
+
+        var html =
+            '<div class="chrome-footer-track">' +
+            '<div class="chrome-footer-side chrome-footer-side--leading">' +
+            '<a href="index.html" class="' + galCls + '" aria-label="Gallery"' + galExtra + '>' + ICON_GALLERY + '</a>' +
+            '</div>' +
+            '<div class="chrome-footer-center">' +
+            '<a href="add.html" class="' + fabCls + '" aria-label="Add café"' + fabExtra + '>+</a>' +
+            '</div>' +
+            '<div class="chrome-footer-side chrome-footer-side--trailing">' +
+            '<button type="button" class="chrome-footer-btn chrome-nav-watchlist" data-watchlist-open aria-label="Watchlist">' +
+            ICON_WATCHLIST +
+            '</button>' +
+            '<a href="map.html" class="' + mapCls + '" aria-label="Map"' + mapExtra + '>' + ICON_MAP + '</a>' +
+            '</div>' +
+            '</div>';
+
+        var footer = document.createElement('footer');
+        footer.className = 'chrome-footer';
+        footer.innerHTML = html;
+        document.body.appendChild(footer);
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
+        ensureChromeFooter();
         ensureSheet();
         document.querySelectorAll('[data-watchlist-open]').forEach(function (btn) {
             btn.addEventListener('click', function () {
