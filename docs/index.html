@@ -13,7 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="chrome.css">
+    <link rel="stylesheet" href="chrome.css?v=8">
     <style>
         /* Warm palette inspired by cup_schema_redesign — used across gallery + chrome fallbacks */
         :root {
@@ -58,7 +58,7 @@
             justify-content: flex-start;
             align-items: center;
             gap: 1rem;
-            padding: 10px max(16px, env(safe-area-inset-left)) 6px max(16px, env(safe-area-inset-right));
+            padding: 6px var(--chrome-gutter-end) 2px var(--chrome-gutter-start);
             margin: 0;
             position: relative;
             z-index: 1;
@@ -123,7 +123,7 @@
             /* Same auto-fill min widths as pre-redesign (HEAD~2) */
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 1.5rem;
-            padding: 1.5rem max(1.5rem, env(safe-area-inset-left)) 1.5rem max(1.5rem, env(safe-area-inset-right));
+            padding: 0.4rem var(--chrome-gutter-end) 1.5rem var(--chrome-gutter-start);
             margin-top: 0;
         }
 
@@ -426,7 +426,7 @@
             .gallery {
                 grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
                 gap: 1rem;
-                padding: 1rem max(1rem, env(safe-area-inset-left)) 1rem max(1rem, env(safe-area-inset-right));
+                padding: 0.35rem var(--chrome-gutter-end) 1rem var(--chrome-gutter-start);
             }
         }
     </style>
@@ -460,19 +460,30 @@
 
     <footer class="chrome-footer">
         <div class="chrome-footer-track">
-            <div class="chrome-footer-left">
-                <button type="button" class="chrome-footer-btn" data-watchlist-open aria-label="Watchlist">
+            <div class="chrome-footer-side chrome-footer-side--leading">
+                <a href="index.html" class="chrome-nav-a chrome-nav-gallery is-active" aria-label="Gallery"
+                    aria-current="page">
+                    <svg class="chrome-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1.25" />
+                        <rect x="14" y="3.5" width="6.5" height="6.5" rx="1.25" />
+                        <rect x="3.5" y="14" width="6.5" height="6.5" rx="1.25" />
+                        <rect x="14" y="14" width="6.5" height="6.5" rx="1.25" />
+                    </svg>
+                </a>
+            </div>
+            <div class="chrome-footer-center">
+                <a href="add.html" class="chrome-fab-add" aria-label="Add café">+</a>
+            </div>
+            <div class="chrome-footer-side chrome-footer-side--trailing">
+                <button type="button" class="chrome-footer-btn chrome-nav-watchlist" data-watchlist-open
+                    aria-label="Watchlist">
                     <svg class="chrome-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M6 2h12a1 1 0 011 1v19l-7-4-7 4V3a1 1 0 011-1z" />
                     </svg>
                 </button>
-            </div>
-            <div class="chrome-footer-fab-wrap">
-                <a href="add.html" class="chrome-fab-add" aria-label="Add café">+</a>
-            </div>
-            <div class="chrome-footer-right">
-                <a href="map.html" class="chrome-nav-a" aria-label="Map view">
+                <a href="map.html" class="chrome-nav-a chrome-nav-map" aria-label="Map">
                     <svg class="chrome-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M12 21s7-4.5 7-11a7 7 0 10-14 0c0 6.5 7 11 7 11z" />
