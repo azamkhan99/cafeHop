@@ -10,8 +10,9 @@ logger = logging.getLogger(__name__)
 
 
 gmaps_api_key = os.environ.get('GOOGLE_PLACES_API_KEY')
-nominatim_api_key = os.environ.get('NOMINATIM_API_KEY')
-geolocator = Nominatim(user_agent=nominatim_api_key)
+# Geopy rejects the library default user_agent; NOMINATIM_API_KEY is optional.
+_nominatim_user_agent = (os.environ.get("NOMINATIM_API_KEY") or "").strip() or "cafehop"
+geolocator = Nominatim(user_agent=_nominatim_user_agent)
 
 # Earth radius in meters
 EARTH_RADIUS_M = 6371000

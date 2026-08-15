@@ -1,4 +1,4 @@
-# DynamoDB table for cafe list (data sourced from S3 cafes.json; load with scripts/load_cafes_to_dynamodb.py)
+# DynamoDB table for cafe list
 resource "aws_dynamodb_table" "cafes" {
   name         = "${var.project_name}-cafes"
   billing_mode = "PAY_PER_REQUEST"

@@ -367,20 +367,6 @@ body.has-chrome {
     border-radius: 8px;
 }
 
-.watchlist-only-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-family: 'Roboto', sans-serif;
-    font-size: 0.9rem;
-    color: #333;
-}
-
-.watchlist-only-row input {
-    width: 18px;
-    height: 18px;
-}
-
 .watchlist-sheet-list {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -389,14 +375,6 @@ body.has-chrome {
     display: flex;
     flex-direction: column;
     gap: 10px;
-}
-
-.watchlist-sheet-empty {
-    font-family: 'Roboto', sans-serif;
-    font-size: 0.9rem;
-    color: #666;
-    padding: 1rem 0;
-    text-align: center;
 }
 
 .watchlist-row {
@@ -432,6 +410,13 @@ body.has-chrome {
     text-overflow: ellipsis;
 }
 
+.watchlist-row-name-link {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-color: rgba(0, 0, 0, 0.28);
+}
+
 .watchlist-row-sub {
     font-size: 0.8rem;
     color: #666;
@@ -451,4 +436,78 @@ body.has-chrome {
 
 .watchlist-row-remove:active {
     background: rgba(0, 0, 0, 0.06);
+}
+
+.watchlist-paste {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.watchlist-paste-input {
+    flex: 1;
+    min-width: 0;
+    height: 42px;
+    padding: 0 12px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 10px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 16px;
+    background: #fff;
+}
+
+.watchlist-paste-btn {
+    flex-shrink: 0;
+    min-width: 64px;
+    border: none;
+    border-radius: 10px;
+    background: #1a1a1a;
+    color: #fff;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.watchlist-paste-status {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #3d6b4f;
+}
+
+.watchlist-paste-status.is-error {
+    color: #a33;
+}
+
+.watchlist-row.is-pending {
+    background: #f4f4f2;
+}
+
+.watchlist-row-thumb--empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #e8e6e2;
+    color: #9a9590;
+    font-size: 1.35rem;
+}
+
+.watchlist-pending-badge {
+    margin-right: 6px;
+    color: #9a9590;
+}
+
+.watchlist-row-log {
+    display: inline-block;
+    margin-top: 6px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #1a1a1a;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.25);
 }

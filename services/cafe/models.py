@@ -62,3 +62,24 @@ class FromUploadRequest(BaseModel):
 class FromUploadResponse(BaseModel):
     key: str
     message: str = "Cafe registered in DynamoDB"
+
+
+class WatchlistCreateRequest(BaseModel):
+    text: str
+
+
+class WatchlistItemOut(BaseModel):
+    id: str
+    name: str
+    thumbUrl: str = ""
+    neighborhood: str = ""
+    lat: float | None = None
+    lng: float | None = None
+    mapsUrl: str = ""
+    placeId: str = ""
+    source: str = "gmaps"
+    pending: bool = True
+
+
+class WatchlistResponse(BaseModel):
+    watchlist: list[WatchlistItemOut]

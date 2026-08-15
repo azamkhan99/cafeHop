@@ -72,7 +72,8 @@ def scan_all(
     while resp.get("LastEvaluatedKey"):
         resp = table.scan(ExclusiveStartKey=resp["LastEvaluatedKey"], **kwargs)
         items.extend(resp.get("Items", []))
-    return [_deserialize(it) for it in items]
+    items = [_deserialize(it) for it in items]
+    return [it for it in items if not is_watchlist_item(it)]
 
 
 def scan(
@@ -93,6 +94,7 @@ def scan(
         resp = table.scan(ExclusiveStartKey=resp["LastEvaluatedKey"], **kwargs)
         items.extend(resp.get("Items", []))
     items = [_deserialize(it) for it in items]
+    items = [it for it in items if not is_watchlist_item(it)]
     return items[offset : offset + limit]
 
 
@@ -135,6 +137,60 @@ def delete_item(cafe_id: str) -> dict | None:
         return _deserialize(item) if item else None
     except Exception as e:
         print(f"db delete_item error: {e}")
+        return None
+
+
+def is_watchlist_item(item: dict | None) -> bool:
+    if not item:
+        return False
+    kind = item.get("kind")
+    key = str(item.get("key") or "")
+    return kind in ("watchlist", "wish") or key.startswith("watchlist:") or key.startswith("wish:")
+
+
+def watchlist_to_api(item: dict) -> dict:
+    lat = item.get("latitude")
+    lng = item.get("longitude")
+    return {
+        "id": item.get("key") or "",
+        "name": item.get("name") or "Saved place",
+        "thumbUrl": item.get("photoUrl") or item.get("thumbUrl") or "",
+        "neighborhood": item.get("neighborhood") or "",
+        "lat": float(lat) if lat is not None else None,
+        "lng": float(lng) if lng is not None else None,
+        "mapsUrl": item.get("mapsUrl") or "",
+        "placeId": item.get("placeId") or "",
+        "source": item.get("source") or "gmaps",
+        "pending": True,
+    }
+
+
+def scan_watchlist_records() -> list[dict]:
+    items = []
+    resp = table.scan()
+    items.extend(resp.get("Items", []))
+    while resp.get("LastEvaluatedKey"):
+        resp = table.scan(ExclusiveStartKey=resp["LastEvaluatedKey"])
+        items.extend(resp.get("Items", []))
+    out = [_deserialize(it) for it in items]
+    return [it for it in out if is_watchlist_item(it)]
+
+
+def put_watchlist_item(item: dict) -> dict:
+    table.put_item(Item=_serialize(item))
+    return watchlist_to_api(_deserialize(item))
+
+
+def delete_watchlist_item(item_id: str) -> dict | None:
+    try:
+        resp = table.delete_item(Key={"key": item_id}, ReturnValues="ALL_OLD")
+        item = resp.get("Attributes")
+        if not item:
+            return None
+        parsed = _deserialize(item)
+        return watchlist_to_api(parsed) if is_watchlist_item(parsed) else None
+    except Exception as e:
+        print(f"db delete_watchlist_item error: {e}")
         return None
 
 

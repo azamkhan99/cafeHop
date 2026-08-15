@@ -9,14 +9,19 @@ from fastapi.responses import JSONResponse, Response
 from db import (
     cafe_to_item,
     delete_item,
+    delete_watchlist_item,
     get_item,
     item_to_cafe_dict,
     put_item,
+    put_watchlist_item,
     scan,
+    scan_watchlist_records,
     update_item,
+    watchlist_to_api,
 )
 from elo import elo_to_cups
 from enrichment import location_enrichment
+from maps_link import attach_watchlist_photo, preview_maps_link, watchlist_item_from_preview
 from models import (
     Cafe,
     CafeListResponse,
@@ -26,8 +31,12 @@ from models import (
     InitialEloResponse,
     RandomCafeListResponse,
     RandomCafeOut,
+    WatchlistCreateRequest,
+    WatchlistItemOut,
+    WatchlistResponse,
 )
 from ranking import compute_initial_elo, get_random_cafes_for_comparison, normalize_comparisons
+from sharecard_service import generate_and_store_share_card
 
 logger = logging.getLogger(__name__)
 
@@ -172,12 +181,58 @@ def from_upload(req: FromUploadRequest):
         "shareCardPngUrl": "",
     }
     try:
+        try:
+            item["shareCardPngUrl"] = generate_and_store_share_card(item)
+        except Exception:
+            logger.exception("share card generation failed key=%r; cafe will still be saved", key)
         put_item(item)
         logger.info("v1/cafes/from-upload ok key=%r name=%r", key, name)
         return FromUploadResponse(key=key, message="Cafe registered in DynamoDB")
     except Exception as e:
         logger.exception("v1/cafes/from-upload failed key=%r", key)
         return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.options("/v1/watchlist")
+@app.options("/v1/watchlist/{item_id}")
+def watchlist_preflight(item_id: str = ""):
+    return Response(status_code=204)
+
+
+@app.get("/v1/watchlist", response_model=WatchlistResponse)
+def list_watchlist():
+    try:
+        items = []
+        for item in scan_watchlist_records():
+            attach_watchlist_photo(item)
+            items.append(watchlist_to_api(item))
+        return WatchlistResponse(watchlist=[WatchlistItemOut(**w) for w in items])
+    except Exception as e:
+        logger.exception("list watchlist failed")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.post("/v1/watchlist", response_model=WatchlistItemOut)
+def create_watchlist_item(req: WatchlistCreateRequest):
+    try:
+        parsed = preview_maps_link(req.text or "")
+        item = watchlist_item_from_preview(parsed)
+        saved = put_watchlist_item(item)
+        saved["thumbUrl"] = parsed.get("photo_url") or ""
+        return WatchlistItemOut(**saved)
+    except ValueError as e:
+        return JSONResponse(status_code=422, content={"error": str(e)})
+    except Exception as e:
+        logger.exception("create watchlist item failed")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.delete("/v1/watchlist/{item_id}", response_model=WatchlistItemOut)
+def remove_watchlist_item(item_id: str):
+    deleted = delete_watchlist_item(item_id)
+    if not deleted:
+        return JSONResponse(status_code=404, content={"error": "Watchlist item not found"})
+    return WatchlistItemOut(**deleted)
 
 
 @app.get("/cafes/{cafe_id}", response_model=Cafe)

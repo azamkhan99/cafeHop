@@ -1,155 +1,153 @@
-import re
-from jinja2 import Environment, FileSystemLoader
-import cairosvg
-from datetime import date
+from __future__ import annotations
+
 import base64
-from pathlib import Path
 import io
-import requests
-from PIL import Image
-import json
+import logging
+import os
+import re
+from datetime import date
+from pathlib import Path
+
 import boto3
+import cairosvg
+from jinja2 import Environment, FileSystemLoader
+from PIL import Image
 
-def font_file_to_data_uri(ttf_path: str) -> str:
-    b = Path(ttf_path).read_bytes()
-    b64 = base64.b64encode(b).decode("utf-8")
-    return f"data:font/ttf;base64,{b64}"
+logger = logging.getLogger(__name__)
 
-def image_url_to_data_uri(url: str) -> str:
-    r = requests.get(url, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
-    r.raise_for_status()
+_REGION = os.environ.get("AWS_REGION", "us-east-1")
+_ENDPOINT = os.environ.get("AWS_ENDPOINT_URL")
+_s3_kwargs: dict = {"region_name": _REGION}
+if _ENDPOINT:
+    _s3_kwargs["endpoint_url"] = _ENDPOINT
 
-    # Convert whatever it is (jpeg/webp/etc.) into PNG
-    img = Image.open(io.BytesIO(r.content)).convert("RGB")
+
+def _s3_client():
+    return boto3.client("s3", **_s3_kwargs)
+
+
+def _templates_dir() -> Path:
+    env_dir = os.environ.get("SHARECARD_TEMPLATES_DIR", "").strip()
+    if env_dir:
+        return Path(env_dir)
+    beside = Path(__file__).resolve().parent / "templates"
+    if beside.is_dir():
+        return beside
+    return Path(__file__).resolve().parents[2] / "assets" / "templates"
+
+
+def _public_bucket_url(bucket_name: str) -> str:
+    configured = os.environ.get("BUCKET_URL", "").rstrip("/")
+    if configured:
+        return configured
+    return f"https://{bucket_name}.s3.{_REGION}.amazonaws.com"
+
+
+def _image_bytes_to_data_uri(raw: bytes) -> str:
+    img = Image.open(io.BytesIO(raw)).convert("RGB")
     out = io.BytesIO()
     img.save(out, format="PNG", optimize=True)
     b64 = base64.b64encode(out.getvalue()).decode("utf-8")
     return f"data:image/png;base64,{b64}"
 
-def shorten_intersection(text):
-    # Split on &
-    m = re.match(r'^\s*([^&]+?)\s*&\s*(.+?)\s*$', text)
+
+def shorten_intersection(text: str) -> str:
+    m = re.match(r"^\s*([^&]+?)\s*&\s*(.+?)\s*$", text)
     if not m:
-        return text  # fail-safe
+        return text
 
     s1, s2 = m.group(1), m.group(2)
-
-    # Normalize directions
     dir_map = {
-        r'\bEast\b': 'E',
-        r'\bWest\b': 'W',
-        r'\bNorth\b': 'N',
-        r'\bSouth\b': 'S'
+        r"\bEast\b": "E",
+        r"\bWest\b": "W",
+        r"\bNorth\b": "N",
+        r"\bSouth\b": "S",
     }
     for pat, repl in dir_map.items():
         s1 = re.sub(pat, repl, s1, flags=re.IGNORECASE)
         s2 = re.sub(pat, repl, s2, flags=re.IGNORECASE)
 
-    # Remove street-type suffixes
-    suffixes = r'\b(St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road|Pl|Place|Ln|Lane|Dr|Drive)\b'
-    s1 = re.sub(suffixes, '', s1, flags=re.IGNORECASE)
-    s2 = re.sub(suffixes, '', s2, flags=re.IGNORECASE)
-
-    # Cleanup extra spaces
-    s1 = re.sub(r'\s+', ' ', s1).strip()
-    s2 = re.sub(r'\s+', ' ', s2).strip()
-
+    suffixes = r"\b(St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road|Pl|Place|Ln|Lane|Dr|Drive)\b"
+    s1 = re.sub(suffixes, "", s1, flags=re.IGNORECASE)
+    s2 = re.sub(suffixes, "", s2, flags=re.IGNORECASE)
+    s1 = re.sub(r"\s+", " ", s1).strip()
+    s2 = re.sub(r"\s+", " ", s2).strip()
     return f"{s1} & {s2}"
 
 
+def _shorten_gmaps_link(link: str) -> str:
+    if "place_id:" in link:
+        place_id = link.split("place_id:")[-1]
+        return f"https://maps.google.com/?q=place_id:{place_id}"
+    return link
 
-def _templates_dir() -> Path:
-    """Repo-root `assets/templates` (this file lives at `legacy/lambda/`)."""
-    return Path(__file__).resolve().parents[2] / "assets" / "templates"
+
+def _subway_lines(data: dict) -> list[str]:
+    routes = data.get("subwayRoutes") or data.get("subway_routes") or []
+    if isinstance(routes, str):
+        return [p.strip() for p in routes.split(",") if p.strip()]
+    if isinstance(routes, list):
+        return [str(x).strip() for x in routes if str(x).strip()]
+    raw = data.get("closest_subway_lines") or ""
+    return [p.strip() for p in str(raw).split(",") if p.strip()]
 
 
-def generate_receipt_card(data, s3_image_url, template: str, width, height):
+def generate_receipt_card(
+    data: dict,
+    cafe_photo_bytes: bytes,
+    template: str = "receipt_card.svg",
+    width: int = 1080,
+    height: int = 1350,
+) -> bytes:
     tdir = _templates_dir()
     env = Environment(loader=FileSystemLoader(str(tdir)))
-    template = env.get_template(template)
+    tmpl = env.get_template(template)
 
-    image_href = image_url_to_data_uri(s3_image_url)
-    citibike_station = data['closest_citibike_station_name']
-    shortened_citibike_station = shorten_intersection(citibike_station).replace("&", "&amp;")
-    
+    citibike_station = str(data.get("closest_citibike_station_name") or "")
+    shortened_citibike = shorten_intersection(citibike_station).replace("&", "&amp;")
+    rating = data.get("eloStarRating", data.get("elo_star_rating", 0)) or 0
 
-    gmaps_place_id = data['google_maps_link'].split("place_id:")[-1]
-    shortened_gmaps_link = f"https://maps.google.com/?q=place_id:{gmaps_place_id}"
-
-    svg = template.render(
-        name=data['cafe-name'],
-        neighborhood=data["neighborhood"],
-        rating=data["elo_star_rating"],
-        subway_lines=data["closest_subway_lines"].split(","),
-        citibike_station = shortened_citibike_station,
-        cafe_photo_href=image_href,
+    svg = tmpl.render(
+        name=data.get("name") or data.get("cafe-name") or "",
+        neighborhood=data.get("neighborhood") or "",
+        rating=rating,
+        subway_lines=_subway_lines(data),
+        citibike_station=shortened_citibike,
+        cafe_photo_href=_image_bytes_to_data_uri(cafe_photo_bytes),
         date=date.today().strftime("%B %d, %Y"),
-        gmaps_link = shortened_gmaps_link
+        gmaps_link=_shorten_gmaps_link(str(data.get("google_maps_link") or "")),
+        font_receipt_title="",
+        font_receipt_mono="",
+    )
+    return cairosvg.svg2png(
+        bytestring=svg.encode("utf-8"),
+        output_width=width,
+        output_height=height,
+        unsafe=True,
     )
 
-    try:
-        print("PHOTO HREF PREVIEW:", image_href[:80])
-        png_bytes = cairosvg.svg2png(bytestring=svg.encode("utf-8"),
-                                    output_width=width, output_height=height, unsafe=True)
-    except Exception as e:
-        print("Error during SVG to PNG conversion:")
-        raise
 
-    return png_bytes
+def generate_and_store_share_card(item: dict) -> str:
+    """Render receipt PNG, upload to S3, return public URL. Empty string if S3 is not configured."""
+    bucket = os.environ.get("BUCKET_NAME", "").strip()
+    object_key = (item.get("key") or "").strip()
+    if not bucket or not object_key:
+        logger.warning("share card skipped: missing BUCKET_NAME or cafe key")
+        return ""
 
-"""
-lambda should run when a new file is uploaded to S3 bucket.
-The key of the file should be the cafe key in cafes.json.
-Use the metadata of the file to generate the share card, store the share card in the same S3 bucket with key "receipt_cards/{cafe_key}.png" and update cafes.json with the share card url
-cafes.json is a list of dicts which has a key field as well as the data fields
-"""
+    s3 = _s3_client()
+    obj = s3.get_object(Bucket=bucket, Key=object_key)
+    png_bytes = generate_receipt_card(item, obj["Body"].read())
 
-def lambda_handler(event, context):
-    s3 = boto3.client('s3')
-
-    # Get the bucket name and object key from the event
-    bucket_name = event['Records'][0]['s3']['bucket']['name']
-    object_key = event['Records'][0]['s3']['object']['key']
-
-    # Get the object's metadata
-    response = s3.head_object(Bucket=bucket_name, Key=object_key)
-    metadata = response['Metadata']
-
-    cafe_key = object_key.split('.')[0]  # assuming the key is the filename without extension
-    s3_image_url = f"https://{bucket_name}.s3.amazonaws.com/{object_key}"
-    # Generate the share card
-    share_card_png = generate_receipt_card(metadata,s3_image_url, "receipt_card.svg", 1080, 1350)
-
-    # Store the share card in S3
-    share_card_key = f"receipt_cards/{cafe_key}.png"
+    stem = Path(object_key).stem
+    share_card_key = f"receipt_cards/{stem}.png"
     s3.put_object(
-        Bucket=bucket_name,
+        Bucket=bucket,
         Key=share_card_key,
-        Body=share_card_png,
-        ContentType='image/png'
+        Body=png_bytes,
+        ContentType="image/png",
+        CacheControl="max-age=31536000",
     )
-
-    share_card_url = f"https://{bucket_name}.s3.amazonaws.com/{share_card_key}"
-
-    # Update cafes.json file in the same bucket
-    cafes_object_key = 'cafes.json'
-    cafes_response = s3.get_object(Bucket=bucket_name, Key=cafes_object_key)
-    cafes_data = json.loads(cafes_response['Body'].read().decode('utf-8'))
-
-    for cafe in cafes_data:
-        if cafe['key'] == cafe_key:
-            cafe['shareCardPngUrl'] = share_card_url
-            break
-
-    # Write the updated cafes data back to cafes.json
-    s3.put_object(
-        Bucket=bucket_name,
-        Key=cafes_object_key,
-        Body=json.dumps(cafes_data),
-        ContentType='application/json'
-    )
-
-    return {
-        'statusCode': 200,
-        'body': json.dumps('Share card generated and cafes.json updated successfully!')
-    }
+    url = f"{_public_bucket_url(bucket)}/{share_card_key}"
+    logger.info("share card stored key=%r url=%r", share_card_key, url)
+    return url

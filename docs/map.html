@@ -15,7 +15,7 @@
         rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="chrome.css?v=8">
+    <link rel="stylesheet" href="chrome.css?v=12">
     <script src="https://cdn.jsdelivr.net/npm/exif-js@2.3.0/exif.js"></script>
     <style>
         :root {
@@ -201,14 +201,14 @@
                 <span>2★</span>
             </div>
             <div class="legend-item">
-                <i class="fas fa-coffee legend-icon" style="color: #ef4444;"></i>
-                <span>1★</span>
+                <i class="fas fa-star legend-icon" style="color: #c5c0b8;"></i>
+                <span>Watchlist</span>
             </div>
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="chrome.js?v=1"></script>
+    <script src="chrome.js?v=9"></script>
     <script src="api-config.js"></script>
     <script>
         const C = window.CafeHopConfig || {};
@@ -409,9 +409,65 @@
         }
 
 
+        let mapInstance = null;
+        let watchlistLayer = null;
+
+        function addWatchlistMarkers(loggedCafes) {
+            if (!mapInstance) return;
+            if (watchlistLayer) {
+                mapInstance.removeLayer(watchlistLayer);
+                watchlistLayer = null;
+            }
+            if (!window.CafeHopWatchlist) return;
+            const draw = function () {
+                const loggedNames = new Set(
+                    (loggedCafes || [])
+                        .map(function (c) { return String(c.name || '').trim().toLowerCase(); })
+                        .filter(Boolean)
+                );
+                watchlistLayer = L.layerGroup();
+                window.CafeHopWatchlist.loadList().forEach(function (it) {
+                    const lat = Number(it.lat);
+                    const lng = Number(it.lng);
+                    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+                    if (loggedNames.has(String(it.name || '').trim().toLowerCase())) return;
+                    const icon = L.divIcon({
+                        className: 'custom-div-icon',
+                        html: '<i class="fas fa-star" style="font-size: 16px; color: #c5c0b8;"></i>',
+                        iconSize: [16, 16],
+                        iconAnchor: [8, 16]
+                    });
+                    const mapsHref = safeHttpUrl(it.mapsUrl)
+                        || (Number.isFinite(lat) && Number.isFinite(lng)
+                            ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(lat + ',' + lng)
+                            : '');
+                    const addHref = 'add.html?watchlist=' + encodeURIComponent(it.id);
+                    const nameHtml = mapsHref
+                        ? '<a href="' + escapeHtml(mapsHref) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(it.name) + '</a>'
+                        : escapeHtml(it.name);
+                    const popup = (
+                        '<div class="custom-popup">' +
+                        '<div class="popup-name">' + nameHtml + '</div>' +
+                        '<div class="popup-stars"><a href="' + escapeHtml(addHref) + '">Log café</a></div>' +
+                        '</div>'
+                    );
+                    L.marker([lat, lng], { icon: icon })
+                        .bindPopup(popup, { className: 'custom-popup-wrapper', maxWidth: 120, minWidth: 100 })
+                        .addTo(watchlistLayer);
+                });
+                watchlistLayer.addTo(mapInstance);
+            };
+            if (window.CafeHopWatchlist.loadList().length) {
+                draw();
+                return;
+            }
+            window.CafeHopWatchlist.refresh().then(draw);
+        }
+
         async function loadMap() {
             // Initialize map
             const map = L.map('map').setView(NYC_CENTER, 13);
+            mapInstance = map;
 
             // Add tile layer - using CartoDB Positron for a clean, modern aesthetic
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -426,6 +482,10 @@
             setTimeout(function () {
                 map.invalidateSize();
             }, 280);
+
+            document.addEventListener('cafehop-watchlist-changed', function () {
+                addWatchlistMarkers(getCachedData() || []);
+            });
 
             try {
                 // Check cache first
@@ -447,6 +507,7 @@
                             .addTo(map)
                             .bindPopup(markerData.popup, popupOptions);
                     });
+                    addWatchlistMarkers(cachedCafes);
 
                     // Fetch fresh data in background and update cache
                     fetchAndUpdateMap(map, true);
@@ -564,6 +625,7 @@
                             .addTo(map)
                             .bindPopup(cafe.popup, popupOptions);
                     });
+                    addWatchlistMarkers(validCafes);
                 } else {
                     console.log('Background update completed, cache refreshed');
                     // Clear existing markers and re-add with fresh data
@@ -577,6 +639,7 @@
                             .addTo(map)
                             .bindPopup(cafe.popup, popupOptions);
                     });
+                    addWatchlistMarkers(validCafes);
                 }
 
             } catch (error) {

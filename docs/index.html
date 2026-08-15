@@ -13,7 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="chrome.css?v=8">
+    <link rel="stylesheet" href="chrome.css?v=12">
     <style>
         /* Warm palette inspired by cup_schema_redesign — used across gallery + chrome fallbacks */
         :root {
@@ -529,14 +529,13 @@
         })();
     </script>
 
-    <script src="chrome.js?v=1"></script>
+    <script src="chrome.js?v=9"></script>
     <script src="api-config.js"></script>
     <script>
         const C = window.CafeHopConfig || {};
         const BUCKET_URL = (C.bucketUrl || '').replace(/\/$/, '');
         const CAFE_API_URL = (C.cafeUrl || '').replace(/\/$/, '');
         let currentSort = 'rating'; // Default sort by ELO rating
-        let watchlistOnlyMode = false;
         let currentNeighborhoodFilter = 'all';
         let cachedCafes = null; // Cache cafes in memory so sort/filter don't refetch
         let cachedSortedCafes = null; // Cache sorted cafes to avoid re-sorting
@@ -569,6 +568,38 @@
             const low = s.slice(0, 8).toLowerCase();
             if (low.startsWith('https://') || low.startsWith('http://')) return s;
             return '';
+        }
+
+        /**
+         * iOS Google Maps treats q=place_id:… as a text search and shows “no results”.
+         * Use the Maps URLs API (query + query_place_id) so the app opens the place.
+         */
+        function googleMapsOpenUrl(cafe) {
+            const stored = safeHttpUrl(cafe.google_maps_link);
+            let placeId = '';
+            const fromQuery = stored.match(/[?&]query_place_id=([^&]+)/i);
+            const fromQ = stored.match(/place_id[=:]([^&\s]+)/i);
+            if (fromQuery) placeId = decodeURIComponent(fromQuery[1]);
+            else if (fromQ) placeId = decodeURIComponent(fromQ[1]);
+            const name = String(cafe.name || '').trim();
+            const query = encodeURIComponent(name || 'cafe');
+            if (placeId) {
+                return (
+                    'https://www.google.com/maps/search/?api=1&query=' +
+                    query +
+                    '&query_place_id=' +
+                    encodeURIComponent(placeId)
+                );
+            }
+            const lat = Number(cafe.latitude);
+            const lon = Number(cafe.longitude);
+            if (Number.isFinite(lat) && Number.isFinite(lon) && (lat !== 0 || lon !== 0)) {
+                return (
+                    'https://www.google.com/maps/search/?api=1&query=' +
+                    encodeURIComponent(name ? name + ' ' + lat + ',' + lon : lat + ',' + lon)
+                );
+            }
+            return stored;
         }
 
         /** SVG fragment id for <use href="#..."> — allow typical NYC line ids only. */
@@ -751,19 +782,12 @@
 
                 // Sort cafes based on current sort mode (with caching)
                 let sortedCafes;
-                const sortKey = `${currentSort}-${filterKey}-wl:${watchlistOnlyMode ? '1' : '0'}`;
+                const sortKey = `${currentSort}-${filterKey}`;
                 if (cachedSortedCafes && cachedSortedCafes.sortKey === sortKey) {
                     sortedCafes = cachedSortedCafes.cafes;
                 } else {
                     sortedCafes = currentSort === 'name' ? sortByName(filteredCafes) : sortByEloRating(filteredCafes);
                     cachedSortedCafes = { sortKey, cafes: sortedCafes };
-                }
-
-                if (watchlistOnlyMode && window.CafeHopWatchlist) {
-                    const wlIds = new Set(window.CafeHopWatchlist.loadList().map(function (x) { return x.id; }));
-                    sortedCafes = sortedCafes.filter(function (c) {
-                        return wlIds.has(window.CafeHopWatchlist.cafeId(c));
-                    });
                 }
 
                 // First batch of cards only (rest on scroll) so fewer images compete on open
@@ -897,7 +921,7 @@
                 ? `<div class="cafe-card-rating"><div class="cups-container cafe-rating-cups">${cupsInner}</div></div>`
                 : '';
 
-            const gmUrl = safeHttpUrl(cafe.google_maps_link);
+            const gmUrl = googleMapsOpenUrl(cafe);
             const neighborhoodHtml = cafe.neighborhood
                 ? `<div class="cafe-neighborhood">` +
                 (gmUrl
@@ -989,24 +1013,10 @@
             });
         }
 
-        window.__cafeHopWatchlistOnly = false;
-        document.addEventListener('cafehop-watchlist-only', function (e) {
-            watchlistOnlyMode = Boolean(e.detail && e.detail.only);
-            window.__cafeHopWatchlistOnly = watchlistOnlyMode;
-            cachedSortedCafes = null;
-            loadImages();
-        });
         document.addEventListener('cafehop-watchlist-changed', function () {
             cachedSortedCafes = null;
             loadImages();
         });
-
-        try {
-            if (new URLSearchParams(location.search).get('watchlist') === '1') {
-                watchlistOnlyMode = true;
-                window.__cafeHopWatchlistOnly = true;
-            }
-        } catch (_) { /* ignore */ }
 
         // Load images when page loads
         document.addEventListener('DOMContentLoaded', loadImages);

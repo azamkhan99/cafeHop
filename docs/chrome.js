@@ -1,8 +1,6 @@
 (function () {
     'use strict';
 
-    var STORAGE_KEY = 'cafeHopWatchlistV1';
-
     function safeHttpUrl(url) {
         var s = String(url || '').trim();
         if (!s) return '';
@@ -11,63 +9,111 @@
         return '';
     }
 
-    function cafeId(cafe) {
-        var k = cafe && cafe.key != null ? String(cafe.key).trim() : '';
-        if (k) return k;
-        var name = (cafe && cafe.name) ? String(cafe.name).trim() : '';
-        var img = safeHttpUrl(cafe && (cafe.imageUrl || cafe.thumbnailUrl)) || '';
-        return 'n:' + name + '|u:' + img.slice(-120);
+    function cafeApiUrl() {
+        var C = window.CafeHopConfig || {};
+        return String(C.cafeUrl || '').replace(/\/$/, '');
     }
 
-    function entryFromCafe(cafe) {
-        var thumb = safeHttpUrl(cafe.thumbnailUrl || cafe.imageUrl) || '';
-        return {
-            id: cafeId(cafe),
-            name: (cafe.name || '').trim() || 'Café',
-            thumbUrl: thumb,
-            neighborhood: cafe.neighborhood || '',
-            lat: cafe.latitude != null ? Number(cafe.latitude) : null,
-            lng: cafe.longitude != null ? Number(cafe.longitude) : null
-        };
+    function setPasteStatus(msg, isError) {
+        ensureSheet();
+        var el = sheetEl.querySelector('#watchlist-paste-status');
+        if (!el) return;
+        if (!msg) {
+            el.hidden = true;
+            el.textContent = '';
+            return;
+        }
+        el.hidden = false;
+        el.textContent = msg;
+        el.classList.toggle('is-error', Boolean(isError));
+    }
+
+    var watchlistCache = [];
+
+    function ingestMapsShare(raw, opts) {
+        var quiet = Boolean(opts && opts.quiet);
+        var text = String(raw || '').trim();
+        if (!text) {
+            if (!quiet) setPasteStatus('Paste a Maps link first.', true);
+            return Promise.resolve(false);
+        }
+        if (!quiet) setPasteStatus('Looking up that place…');
+        var api = cafeApiUrl();
+        if (!api) {
+            if (!quiet) setPasteStatus('Cafe API is not configured', true);
+            return Promise.resolve(false);
+        }
+        return fetch(api + '/v1/watchlist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: text })
+        }).then(function (res) {
+            return res.json().then(function (body) {
+                if (!res.ok) throw new Error(body.error || ('Add failed (' + res.status + ')'));
+                return body;
+            });
+        }).then(function () {
+            return refreshWatchlist();
+        }).then(function () {
+            if (!quiet) setPasteStatus('Added');
+            renderSheetList();
+            window.dispatchEvent(new CustomEvent('cafehop-watchlist-changed'));
+            return true;
+        }).catch(function (err) {
+            if (!quiet) setPasteStatus(err && err.message ? err.message : 'Could not read that link.', true);
+            return false;
+        });
+    }
+
+    function consumeShareQuery() {
+        try {
+            var params = new URLSearchParams(location.search);
+            var blob = [params.get('url'), params.get('text'), params.get('title'), params.get('gmaps')]
+                .filter(Boolean)
+                .join(' ');
+            if (!/maps\.app\.goo\.gl|google\.com\/maps|maps\.google\.com/i.test(blob)) return;
+            openWatchlistSheet();
+            ingestMapsShare(blob).then(function (ok) {
+                if (!ok) return;
+                if (history.replaceState) {
+                    history.replaceState({}, '', location.pathname);
+                }
+            });
+        } catch (e) { /* ignore */ }
+    }
+
+    function getById(id) {
+        return watchlistCache.filter(function (x) { return x.id === id; })[0] || null;
     }
 
     function loadList() {
-        try {
-            var raw = localStorage.getItem(STORAGE_KEY);
-            if (!raw) return [];
-            var arr = JSON.parse(raw);
-            return Array.isArray(arr) ? arr : [];
-        } catch (e) {
-            return [];
+        return watchlistCache.slice();
+    }
+
+    function refreshWatchlist() {
+        var api = cafeApiUrl();
+        if (!api) {
+            watchlistCache = [];
+            return Promise.resolve(watchlistCache);
         }
-    }
-
-    function saveList(arr) {
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
-        } catch (e) { /* ignore quota */ }
-    }
-
-    function addEntry(entry) {
-        var list = loadList().filter(function (x) { return x.id !== entry.id; });
-        list.unshift(entry);
-        saveList(list);
+        return fetch(api + '/v1/watchlist').then(function (res) {
+            return res.json().then(function (body) {
+                if (!res.ok) throw new Error(body.error || ('Watchlist failed (' + res.status + ')'));
+                watchlistCache = Array.isArray(body.watchlist) ? body.watchlist : [];
+                return watchlistCache;
+            });
+        }).catch(function () {
+            watchlistCache = [];
+            return watchlistCache;
+        });
     }
 
     function removeById(id) {
-        saveList(loadList().filter(function (x) { return x.id !== id; }));
-    }
-
-    function toggleCafe(cafe) {
-        var id = cafeId(cafe);
-        var list = loadList();
-        var exists = list.some(function (x) { return x.id === id; });
-        if (exists) {
-            removeById(id);
-            return false;
-        }
-        addEntry(entryFromCafe(cafe));
-        return true;
+        var api = cafeApiUrl();
+        if (!api || !id) return Promise.resolve();
+        return fetch(api + '/v1/watchlist/' + encodeURIComponent(id), { method: 'DELETE' }).then(function () {
+            return refreshWatchlist();
+        });
     }
 
     var sheetEl = null;
@@ -86,10 +132,12 @@
             '<span class="watchlist-sheet-title">Watchlist</span>' +
             '<button type="button" class="watchlist-sheet-close" data-watchlist-close aria-label="Close">×</button>' +
             '</div>' +
-            '<label class="watchlist-only-row" id="watchlist-only-wrap" style="display:none">' +
-            '<input type="checkbox" id="watchlist-only-gallery" />' +
-            '<span>Show watchlist only in gallery</span>' +
-            '</label>' +
+            '<form class="watchlist-paste" id="watchlist-paste-form">' +
+            '<input type="url" id="watchlist-paste-input" class="watchlist-paste-input" ' +
+            'placeholder="Paste a Google Maps link" autocomplete="off" enterkeyhint="done" />' +
+            '<button type="submit" class="watchlist-paste-btn">Add</button>' +
+            '</form>' +
+            '<p class="watchlist-paste-status" id="watchlist-paste-status" hidden></p>' +
             '<div class="watchlist-sheet-list" id="watchlist-sheet-list"></div>' +
             '</div>';
 
@@ -101,12 +149,15 @@
             }
         });
 
-        var onlyWrap = sheetEl.querySelector('#watchlist-only-wrap');
-        var onlyCb = sheetEl.querySelector('#watchlist-only-gallery');
-        if (document.body.getAttribute('data-chrome-page') === 'gallery' && onlyWrap && onlyCb) {
-            onlyWrap.style.display = 'flex';
-            onlyCb.addEventListener('change', function () {
-                window.dispatchEvent(new CustomEvent('cafehop-watchlist-only', { detail: { only: onlyCb.checked } }));
+        var pasteForm = sheetEl.querySelector('#watchlist-paste-form');
+        if (pasteForm) {
+            pasteForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                var input = sheetEl.querySelector('#watchlist-paste-input');
+                var raw = input ? String(input.value || '').trim() : '';
+                ingestMapsShare(raw).then(function (ok) {
+                    if (ok && input) input.value = '';
+                });
             });
         }
 
@@ -127,26 +178,37 @@
 
         var items = loadList();
         if (items.length === 0) {
-            listEl.innerHTML = '<p class="watchlist-sheet-empty">No places on your watchlist yet.</p>';
+            listEl.innerHTML = '';
             return;
         }
 
         listEl.innerHTML = items.map(function (it) {
             var thumb = safeHttpUrl(it.thumbUrl);
             var sub = (it.neighborhood || '').trim();
-            var maps = it.lat != null && it.lng != null && !isNaN(it.lat) && !isNaN(it.lng)
-                ? 'https://www.google.com/maps?q=' + encodeURIComponent(it.lat + ',' + it.lng)
+            var pending = it.source === 'gmaps' || it.pending;
+            var mapsHref = safeHttpUrl(it.mapsUrl);
+            if (!mapsHref && it.lat != null && it.lng != null) {
+                mapsHref = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(it.lat + ',' + it.lng);
+            }
+            var nameHtml = mapsHref
+                ? '<a class="watchlist-row-name-link" href="' + escapeHtml(mapsHref) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(it.name) + '</a>'
+                : escapeHtml(it.name);
+            var addHref = 'add.html?watchlist=' + encodeURIComponent(it.id);
+            var pendingMark = pending
+                ? '<span class="watchlist-pending-badge" title="Watchlist">☆</span>'
                 : '';
-            var mapsBtn = maps
-                ? '<a class="watchlist-row-sub" href="' + escapeHtml(maps) + '" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-top:4px">Open in Maps</a>'
+            var addBtn = pending
+                ? '<a class="watchlist-row-log" href="' + addHref + '">Log café</a>'
                 : '';
             return (
-                '<div class="watchlist-row" data-watchlist-id="' + escapeHtml(it.id) + '">' +
-                (thumb ? '<img class="watchlist-row-thumb" src="' + escapeHtml(thumb) + '" alt="" loading="lazy" />' : '<div class="watchlist-row-thumb"></div>') +
+                '<div class="watchlist-row' + (pending ? ' is-pending' : '') + '" data-watchlist-id="' + escapeHtml(it.id) + '">' +
+                (thumb
+                    ? '<img class="watchlist-row-thumb" src="' + escapeHtml(thumb) + '" alt="" loading="lazy" referrerpolicy="no-referrer" />'
+                    : '<div class="watchlist-row-thumb watchlist-row-thumb--empty" aria-hidden="true">☆</div>') +
                 '<div class="watchlist-row-meta">' +
-                '<div class="watchlist-row-name">' + escapeHtml(it.name) + '</div>' +
+                '<div class="watchlist-row-name">' + pendingMark + nameHtml + '</div>' +
                 (sub ? '<div class="watchlist-row-sub">' + escapeHtml(sub) + '</div>' : '') +
-                mapsBtn +
+                addBtn +
                 '</div>' +
                 '<button type="button" class="watchlist-row-remove" data-watchlist-remove="' + escapeHtml(it.id) + '" aria-label="Remove">×</button>' +
                 '</div>'
@@ -156,22 +218,22 @@
         listEl.querySelectorAll('[data-watchlist-remove]').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 var id = btn.getAttribute('data-watchlist-remove');
-                if (id) removeById(id);
-                renderSheetList();
-                window.dispatchEvent(new CustomEvent('cafehop-watchlist-changed'));
+                if (!id) return;
+                removeById(id).then(function () {
+                    renderSheetList();
+                    window.dispatchEvent(new CustomEvent('cafehop-watchlist-changed'));
+                });
             });
         });
     }
 
     function openWatchlistSheet() {
         ensureSheet();
-        renderSheetList();
-        var onlyCb = sheetEl.querySelector('#watchlist-only-gallery');
-        if (onlyCb && typeof window.__cafeHopWatchlistOnly === 'boolean') {
-            onlyCb.checked = window.__cafeHopWatchlistOnly;
-        }
         sheetEl.classList.add('is-open');
         sheetEl.setAttribute('aria-hidden', 'false');
+        refreshWatchlist().then(function () {
+            renderSheetList();
+        });
     }
 
     function closeWatchlistSheet() {
@@ -247,13 +309,16 @@
                 openWatchlistSheet();
             });
         });
+        consumeShareQuery();
+        refreshWatchlist();
     });
 
     window.CafeHopWatchlist = {
-        cafeId: cafeId,
         loadList: loadList,
-        toggleCafe: toggleCafe,
+        getById: getById,
+        refresh: refreshWatchlist,
         removeById: removeById,
+        ingestMapsShare: ingestMapsShare,
         openWatchlistSheet: openWatchlistSheet,
         closeWatchlistSheet: closeWatchlistSheet
     };

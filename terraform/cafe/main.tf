@@ -93,6 +93,26 @@ resource "aws_iam_role_policy" "cafe_dynamodb" {
   })
 }
 
+resource "aws_iam_role_policy" "cafe_s3" {
+  name = "${var.project_name}-cafe-lambda-s3"
+  role = aws_iam_role.cafe.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "ShareCardObjectRW"
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+        ]
+        Resource = "arn:aws:s3:::${var.s3_bucket_name}/*"
+      },
+    ]
+  })
+}
+
 resource "aws_lambda_function" "cafe" {
   function_name = var.lambda_function_name
   role          = aws_iam_role.cafe.arn

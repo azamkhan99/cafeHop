@@ -28,6 +28,10 @@ cafe-api = [
     "numpy>=1.24.0",
     "geopy>=2.4.0",
     "googlemaps>=4.10.0",
+    "requests>=2.31.0",
+    "Jinja2>=3.1.0",
+    "cairosvg>=2.7.0",
+    "Pillow>=10.0.0",
 ]
 # Docker / local: services/image (FastAPI + S3 + thumbnails)
 image-api = [
@@ -57,6 +61,10 @@ lambda-cafe = [
     "numpy>=1.24.0",
     "geopy>=2.4.0",
     "googlemaps>=4.10.0",
+    "requests>=2.31.0",
+    "Jinja2>=3.1.0",
+    "cairosvg>=2.7.0",
+    "Pillow>=10.0.0",
 ]
 # AWS Lambda container: services/auth (JWT only)
 lambda-auth = [
