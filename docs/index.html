@@ -13,7 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="chrome.css?v=12">
+    <link rel="stylesheet" href="chrome.css?v=13">
     <style>
         /* Warm palette inspired by cup_schema_redesign — used across gallery + chrome fallbacks */
         :root {
@@ -69,10 +69,15 @@
             display: flex;
             align-items: center;
             gap: 0.35rem;
+            width: 100%;
             font-family: 'Space Grotesk', sans-serif;
             font-size: 0.8125rem;
             color: var(--schema-text-secondary);
             letter-spacing: 0.06em;
+        }
+
+        .filter-wrapper .chrome-sort {
+            margin-left: auto;
         }
 
         .filter-label {
@@ -436,7 +441,6 @@
     <header class="chrome-header">
         <div class="chrome-header-inner">
             <a href="index.html" class="chrome-brand">Cup <span class="chrome-brand-accent">Schema</span></a>
-            <button type="button" class="chrome-sort" id="toggle-sort">RATING</button>
         </div>
     </header>
 
@@ -449,6 +453,7 @@
                 </select>
                 <span class="filter-arrow">▾</span>
             </div>
+            <button type="button" class="chrome-sort" id="toggle-sort">RATING</button>
         </div>
     </div>
 
@@ -529,7 +534,7 @@
         })();
     </script>
 
-    <script src="chrome.js?v=9"></script>
+    <script src="chrome.js?v=11"></script>
     <script src="api-config.js"></script>
     <script>
         const C = window.CafeHopConfig || {};
@@ -624,6 +629,7 @@
                 imageUrl,
                 thumbnailUrl: mapThumb || imageUrl,
                 lastModified: cafe.last_modified || cafe.lastModified || '',
+                createdAt: cafe.created_at || cafe.createdAt || '',
                 neighborhood: cafe.neighborhood || null,
                 subwayRoutes: cafe.subway_routes || cafe.subwayRoutes || null,
                 subwayStation: cafe.subway_station || cafe.subwayStation || null,
@@ -691,6 +697,17 @@
             });
         }
 
+        function cafeAddedAt(cafe) {
+            return Date.parse(cafe.createdAt || cafe.lastModified || '') || 0;
+        }
+
+        function sortByRecent(cafes) {
+            return [...cafes].sort((a, b) => {
+                const diff = cafeAddedAt(b) - cafeAddedAt(a);
+                if (diff !== 0) return diff;
+                return a.name.localeCompare(b.name);
+            });
+        }
 
         // Function to generate subway icon HTML using sprite
         function generateSubwayIcons(routes) {
@@ -786,7 +803,11 @@
                 if (cachedSortedCafes && cachedSortedCafes.sortKey === sortKey) {
                     sortedCafes = cachedSortedCafes.cafes;
                 } else {
-                    sortedCafes = currentSort === 'name' ? sortByName(filteredCafes) : sortByEloRating(filteredCafes);
+                    sortedCafes = currentSort === 'name'
+                        ? sortByName(filteredCafes)
+                        : currentSort === 'recent'
+                            ? sortByRecent(filteredCafes)
+                            : sortByEloRating(filteredCafes);
                     cachedSortedCafes = { sortKey, cafes: sortedCafes };
                 }
 
@@ -991,12 +1012,14 @@
         const sortButton = document.getElementById('toggle-sort');
         function updateSortLabel() {
             if (!sortButton) return;
-            sortButton.textContent = currentSort === 'rating' ? 'RATING' : 'A/Z';
+            if (currentSort === 'rating') sortButton.textContent = 'RATING';
+            else if (currentSort === 'name') sortButton.textContent = 'A/Z';
+            else sortButton.textContent = 'NEW';
         }
 
         if (sortButton) {
             sortButton.addEventListener('click', () => {
-                currentSort = currentSort === 'rating' ? 'name' : 'rating';
+                currentSort = currentSort === 'rating' ? 'name' : currentSort === 'name' ? 'recent' : 'rating';
                 updateSortLabel();
                 loadImages();
             });

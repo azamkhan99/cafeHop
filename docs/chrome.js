@@ -171,6 +171,18 @@
         return div.innerHTML;
     }
 
+    function displayPlaceName(name) {
+        var s = String(name || '').trim();
+        var i = s.indexOf(',');
+        if (i < 0) return s;
+        var tail = s.slice(i + 1);
+        if (/\d/.test(tail)) {
+            var head = s.slice(0, i).trim();
+            return head || s;
+        }
+        return s;
+    }
+
     function renderSheetList() {
         ensureSheet();
         var listEl = sheetEl.querySelector('#watchlist-sheet-list');
@@ -190,9 +202,10 @@
             if (!mapsHref && it.lat != null && it.lng != null) {
                 mapsHref = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(it.lat + ',' + it.lng);
             }
+            var label = displayPlaceName(it.name);
             var nameHtml = mapsHref
-                ? '<a class="watchlist-row-name-link" href="' + escapeHtml(mapsHref) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(it.name) + '</a>'
-                : escapeHtml(it.name);
+                ? '<a class="watchlist-row-name-link" href="' + escapeHtml(mapsHref) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(label) + '</a>'
+                : escapeHtml(label);
             var addHref = 'add.html?watchlist=' + encodeURIComponent(it.id);
             var pendingMark = pending
                 ? '<span class="watchlist-pending-badge" title="Watchlist">☆</span>'
@@ -210,7 +223,14 @@
                 (sub ? '<div class="watchlist-row-sub">' + escapeHtml(sub) + '</div>' : '') +
                 addBtn +
                 '</div>' +
-                '<button type="button" class="watchlist-row-remove" data-watchlist-remove="' + escapeHtml(it.id) + '" aria-label="Remove">×</button>' +
+                '<button type="button" class="watchlist-row-remove" data-watchlist-remove="' + escapeHtml(it.id) + '" aria-label="Remove">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+                '<polyline points="3 6 5 6 21 6"/>' +
+                '<path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>' +
+                '<path d="M10 11v6M14 11v6"/>' +
+                '<path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>' +
+                '</svg>' +
+                '</button>' +
                 '</div>'
             );
         }).join('');

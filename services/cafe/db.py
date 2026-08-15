@@ -218,13 +218,14 @@ def item_to_cafe_dict(item: dict) -> dict:
         "closest_citibike_station_distance_m": float(item["closest_citibike_station_distance_m"]) if item.get("closest_citibike_station_distance_m") is not None else 0.0,
         "closest_citibike_station_walk_minutes": int(item["closest_citibike_station_walk_minutes"]) if item.get("closest_citibike_station_walk_minutes") is not None else 0,
         "share_card_png_url": item.get("shareCardPngUrl") or item.get("share_card_png_url", ""),
+        "created_at": item.get("createdAt") or item.get("created_at") or "",
     }
 
 
 def cafe_to_item(cafe_dict: dict) -> dict:
     """Convert Cafe.model_dump() (snake_case) to DynamoDB item (cafes.json shape)."""
     key = cafe_dict.get("s3_key") or cafe_dict.get("key", "")
-    return {
+    item = {
         "key": key,
         "name": cafe_dict.get("name", ""),
         "imageUrl": cafe_dict.get("image_url", ""),
@@ -244,3 +245,7 @@ def cafe_to_item(cafe_dict: dict) -> dict:
         "closest_citibike_station_walk_minutes": cafe_dict.get("closest_citibike_station_walk_minutes", 0),
         "shareCardPngUrl": cafe_dict.get("share_card_png_url", ""),
     }
+    created = cafe_dict.get("created_at") or ""
+    if created:
+        item["createdAt"] = created
+    return item

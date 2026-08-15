@@ -31,6 +31,16 @@ def extract_maps_url(text: str) -> str:
     return m.group(0).rstrip(").,;]")
 
 
+def _short_place_name(name: str) -> str:
+    raw = re.sub(r"\s+", " ", (name or "").strip())
+    if "," not in raw:
+        return raw
+    head, tail = raw.split(",", 1)
+    if re.search(r"\d", tail):
+        return head.strip() or raw
+    return raw
+
+
 def _host_ok(host: str | None) -> bool:
     if not host:
         return False
@@ -89,7 +99,7 @@ def parse_maps_url(url: str) -> dict:
             place_id = chij.group(1)
 
     return {
-        "name": name,
+        "name": _short_place_name(name),
         "latitude": lat,
         "longitude": lng,
         "place_id": place_id,
@@ -99,12 +109,6 @@ def parse_maps_url(url: str) -> dict:
 
 def _places_api_key() -> str:
     return (os.environ.get("GOOGLE_PLACES_API_KEY") or "").strip()
-
-
-def _first_photos(obj: dict | None) -> list:
-    if not obj:
-        return []
-    return obj.get("photos") or []
 
 
 def _photo_cdn_url(photo_reference: str) -> str:
@@ -126,48 +130,67 @@ def _photo_cdn_url(photo_reference: str) -> str:
     return ""
 
 
+def _geom_lat_lng(obj: dict | None) -> tuple[float | None, float | None]:
+    loc = ((obj or {}).get("geometry") or {}).get("location") or {}
+    lat, lng = loc.get("lat"), loc.get("lng")
+    if lat is None or lng is None:
+        return None, None
+    return float(lat), float(lng)
+
+
 def resolve_place_and_photo(
     name: str,
     lat: float | None,
     lng: float | None,
     place_id: str,
-) -> tuple[str, str]:
-    """Look up a Google place and a live photo CDN URL. Does not store the image."""
+) -> tuple[str, str, float | None, float | None, str]:
+    """Look up a Google place, live photo CDN URL, coordinates, and venue name."""
     key = _places_api_key()
     pid = (place_id or "").strip()
+    out_lat, out_lng = lat, lng
+    out_name = _short_place_name(name)
     if not key:
         logger.warning("GOOGLE_PLACES_API_KEY is not set; skip watchlist place photo")
-        return pid, ""
+        return pid, "", out_lat, out_lng, out_name
     try:
         client = googlemaps.Client(key=key)
         photos: list = []
 
-        if pid.startswith("ChIJ"):
-            det = client.place(pid, fields=["photo", "place_id"])
-            result = det.get("result") or {}
+        def apply_result(result: dict) -> None:
+            nonlocal pid, photos, out_lat, out_lng, out_name
+            if not result:
+                return
             pid = result.get("place_id") or pid
-            photos = _first_photos(result)
+            if result.get("photos"):
+                photos = result["photos"]
+            glat, glng = _geom_lat_lng(result)
+            if glat is not None:
+                out_lat, out_lng = glat, glng
+            place_name = (result.get("name") or "").strip()
+            if place_name:
+                out_name = _short_place_name(place_name)
 
-        if not photos and name:
+        if pid.startswith("ChIJ"):
+            det = client.place(pid, fields=["photo", "place_id", "geometry", "name"])
+            apply_result(det.get("result") or {})
+
+        if not pid and name:
             kwargs: dict = {
                 "input": name,
                 "input_type": "textquery",
-                "fields": ["place_id", "photos", "name"],
+                "fields": ["place_id", "photos", "name", "geometry"],
             }
             if lat is not None and lng is not None:
                 kwargs["location_bias"] = f"point:{lat},{lng}"
             found = client.find_place(**kwargs)
             for cand in found.get("candidates") or []:
-                pid = cand.get("place_id") or pid
-                photos = _first_photos(cand)
+                apply_result(cand)
                 if pid:
                     break
 
-        if not photos and pid:
-            det = client.place(pid, fields=["photo", "place_id"])
-            result = det.get("result") or {}
-            pid = result.get("place_id") or pid
-            photos = _first_photos(result)
+        if pid and (not photos or out_lat is None or not out_name):
+            det = client.place(pid, fields=["photo", "place_id", "geometry", "name"])
+            apply_result(det.get("result") or {})
 
         if not photos and lat is not None and lng is not None:
             nearby_kwargs: dict = {"location": (lat, lng), "radius": 150, "type": "cafe"}
@@ -175,23 +198,22 @@ def resolve_place_and_photo(
                 nearby_kwargs["keyword"] = name
             nearby = client.places_nearby(**nearby_kwargs)
             for result in nearby.get("results") or []:
-                photos = _first_photos(result)
+                apply_result(result)
                 if photos:
-                    pid = result.get("place_id") or pid
                     break
 
         if not photos:
             logger.info("Places returned no photos name=%r pid=%r", name, pid)
-            return pid, ""
-        return pid, _photo_cdn_url(photos[0].get("photo_reference") or "")
+            return pid, "", out_lat, out_lng, out_name
+        return pid, _photo_cdn_url(photos[0].get("photo_reference") or ""), out_lat, out_lng, out_name
     except Exception:
         logger.exception("Places photo lookup failed")
-        return pid, ""
+        return pid, "", out_lat, out_lng, out_name
 
 
 def attach_watchlist_photo(item: dict) -> dict:
-    """Add a live Places thumbUrl for the API response. Does not persist the image."""
-    pid, photo_url = resolve_place_and_photo(
+    """Add a live Places thumb, coordinates, and venue name for the API response."""
+    pid, photo_url, lat, lng, place_name = resolve_place_and_photo(
         item.get("name") or "",
         item.get("latitude"),
         item.get("longitude"),
@@ -199,6 +221,12 @@ def attach_watchlist_photo(item: dict) -> dict:
     )
     if pid and pid != (item.get("placeId") or ""):
         item["placeId"] = pid
+    if lat is not None:
+        item["latitude"] = lat
+    if lng is not None:
+        item["longitude"] = lng
+    if place_name:
+        item["name"] = place_name
     item["photoUrl"] = photo_url
     return item
 
@@ -243,7 +271,7 @@ def preview_maps_link(raw: str) -> dict:
     if not parsed["name"]:
         parsed["name"] = "Saved place"
     parsed["maps_url"] = final if "google.com/maps" in final else url
-    pid, photo_url = resolve_place_and_photo(
+    pid, photo_url, plat, plng, place_name = resolve_place_and_photo(
         parsed["name"],
         parsed["latitude"],
         parsed["longitude"],
@@ -251,6 +279,12 @@ def preview_maps_link(raw: str) -> dict:
     )
     if pid:
         parsed["place_id"] = pid
+    if place_name:
+        parsed["name"] = place_name
+    if parsed.get("latitude") is None and plat is not None:
+        parsed["latitude"] = plat
+    if parsed.get("longitude") is None and plng is not None:
+        parsed["longitude"] = plng
     parsed["photo_url"] = photo_url
     logger.info(
         "maps preview name=%r lat=%s lng=%s photo=%s",

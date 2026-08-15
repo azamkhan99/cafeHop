@@ -429,9 +429,18 @@ body.has-chrome {
     border: none;
     background: transparent;
     color: #888;
-    font-size: 1.1rem;
     cursor: pointer;
     border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.watchlist-row-remove svg {
+    width: 18px;
+    height: 18px;
+    display: block;
 }
 
 .watchlist-row-remove:active {

@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+from datetime import datetime, timezone
 
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -179,6 +180,7 @@ def from_upload(req: FromUploadRequest):
         "closest_citibike_station_distance_m": citibike_distance_m,
         "closest_citibike_station_walk_minutes": citibike_walk_mins,
         "shareCardPngUrl": "",
+        "createdAt": datetime.now(timezone.utc).isoformat(),
     }
     try:
         try:

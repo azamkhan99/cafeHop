@@ -15,7 +15,7 @@
         rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="chrome.css?v=12">
+    <link rel="stylesheet" href="chrome.css?v=13">
     <script src="https://cdn.jsdelivr.net/npm/exif-js@2.3.0/exif.js"></script>
     <style>
         :root {
@@ -208,7 +208,7 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="chrome.js?v=9"></script>
+    <script src="chrome.js?v=11"></script>
     <script src="api-config.js"></script>
     <script>
         const C = window.CafeHopConfig || {};
@@ -260,6 +260,18 @@
             const div = document.createElement('div');
             div.textContent = String(text);
             return div.innerHTML;
+        }
+
+        function displayPlaceName(name) {
+            const s = String(name || '').trim();
+            const i = s.indexOf(',');
+            if (i < 0) return s;
+            const tail = s.slice(i + 1);
+            if (/\d/.test(tail)) {
+                const head = s.slice(0, i).trim();
+                return head || s;
+            }
+            return s;
         }
 
         function safeHttpUrl(url) {
@@ -437,30 +449,17 @@
                         iconSize: [16, 16],
                         iconAnchor: [8, 16]
                     });
-                    const mapsHref = safeHttpUrl(it.mapsUrl)
-                        || (Number.isFinite(lat) && Number.isFinite(lng)
-                            ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(lat + ',' + lng)
-                            : '');
-                    const addHref = 'add.html?watchlist=' + encodeURIComponent(it.id);
-                    const nameHtml = mapsHref
-                        ? '<a href="' + escapeHtml(mapsHref) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(it.name) + '</a>'
-                        : escapeHtml(it.name);
                     const popup = (
                         '<div class="custom-popup">' +
-                        '<div class="popup-name">' + nameHtml + '</div>' +
-                        '<div class="popup-stars"><a href="' + escapeHtml(addHref) + '">Log café</a></div>' +
+                        '<div class="popup-name">' + escapeHtml(displayPlaceName(it.name)) + '</div>' +
                         '</div>'
                     );
                     L.marker([lat, lng], { icon: icon })
-                        .bindPopup(popup, { className: 'custom-popup-wrapper', maxWidth: 120, minWidth: 100 })
+                        .bindPopup(popup, { className: 'custom-popup-wrapper', maxWidth: 160, minWidth: 100 })
                         .addTo(watchlistLayer);
                 });
                 watchlistLayer.addTo(mapInstance);
             };
-            if (window.CafeHopWatchlist.loadList().length) {
-                draw();
-                return;
-            }
             window.CafeHopWatchlist.refresh().then(draw);
         }
 

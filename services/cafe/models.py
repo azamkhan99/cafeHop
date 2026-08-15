@@ -23,6 +23,7 @@ class Cafe(BaseModel):
     closest_citibike_station_distance_m: float
     closest_citibike_station_walk_minutes: int
     share_card_png_url: str
+    created_at: str = ""
 
 
 class CafeListResponse(BaseModel):
