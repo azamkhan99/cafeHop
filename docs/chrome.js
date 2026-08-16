@@ -1,6 +1,23 @@
 (function () {
     'use strict';
 
+    /** Home Screen / installed PWA vs in-Safari (or other browser) tab. */
+    function isStandaloneDisplay() {
+        if (typeof window.matchMedia === 'function') {
+            if (window.matchMedia('(display-mode: standalone)').matches) return true;
+            if (window.matchMedia('(display-mode: fullscreen)').matches) return true;
+        }
+        return Boolean(window.navigator && window.navigator.standalone);
+    }
+
+    if (isStandaloneDisplay()) {
+        document.documentElement.classList.add('is-standalone');
+        document.documentElement.classList.remove('in-browser');
+    } else {
+        document.documentElement.classList.add('in-browser');
+        document.documentElement.classList.remove('is-standalone');
+    }
+
     function safeHttpUrl(url) {
         var s = String(url || '').trim();
         if (!s) return '';

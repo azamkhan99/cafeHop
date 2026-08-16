@@ -13,6 +13,21 @@
     --chrome-gutter-end: max(10px, env(safe-area-inset-right, 0px));
 }
 
+/*
+ * Safari browser (not Home Screen standalone): Safari's own toolbar already
+ * clears the home indicator. Keeping safe-area-inset-bottom here stacks a
+ * second inset and leaves an empty cream/gray “footer” band above the toolbar.
+ */
+html.in-browser {
+    --chrome-footer-pad: 6px;
+}
+
+@media not all and (display-mode: standalone) {
+    :root {
+        --chrome-footer-pad: 6px;
+    }
+}
+
 html {
     height: 100%;
     /* iOS Safari: percentage heights on body resolve against the painted viewport */
