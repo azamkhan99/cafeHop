@@ -4,8 +4,9 @@
     --chrome-header-h: 32px;
     --chrome-below-header-gap: 3px;
     --chrome-footer-track-h: 46px;
-    --chrome-footer-pad: max(10px, env(safe-area-inset-bottom, 0px));
-    --chrome-footer-total: calc(var(--chrome-footer-pad) + var(--chrome-footer-track-h) + 14px);
+    /* Sit close to the home indicator; only a thin cushion beyond safe-area */
+    --chrome-footer-pad: max(2px, env(safe-area-inset-bottom, 0px));
+    --chrome-footer-total: calc(var(--chrome-footer-pad) + var(--chrome-footer-track-h) + 6px);
     --chrome-header-pad-top: max(3px, env(safe-area-inset-top, 0px));
     /* Horizontal inset: matches header title edge (notch-aware) */
     --chrome-gutter-start: max(10px, env(safe-area-inset-left, 0px));
@@ -35,9 +36,13 @@ body.has-chrome {
     right: 0;
     z-index: 3000;
     padding: var(--chrome-header-pad-top) var(--chrome-gutter-end) 3px var(--chrome-gutter-start);
+    /* Opaque — avoids iOS Home Screen “blurred” status/header band */
     background: var(--schema-bg, #fdfbf8);
+    background-color: var(--schema-bg, #fdfbf8);
     border-bottom: 1px solid var(--schema-border-tertiary, rgba(0, 0, 0, 0.1));
     box-sizing: border-box;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     transition: padding 0.22s ease, border-color 0.22s ease;
 }
 
@@ -115,7 +120,7 @@ body.has-chrome {
     display: flex;
     justify-content: center;
     align-items: flex-end;
-    padding: 8px var(--chrome-gutter-end) var(--chrome-footer-pad) var(--chrome-gutter-start);
+    padding: 2px var(--chrome-gutter-end) var(--chrome-footer-pad) var(--chrome-gutter-start);
     box-sizing: border-box;
     pointer-events: none;
     background: transparent;
