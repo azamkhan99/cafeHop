@@ -18,6 +18,40 @@
         document.documentElement.classList.remove('is-standalone');
     }
 
+    /**
+     * Keep fixed footer (and map) flush with the visible Safari viewport.
+     * Layout viewport is taller than the visual viewport when the toolbar shows,
+     * which leaves an empty “footer” band on map/add.
+     */
+    function pinFixedChromeToVisualViewport() {
+        if (isStandaloneDisplay()) {
+            document.documentElement.style.removeProperty('--vv-bottom-inset');
+            return;
+        }
+
+        function apply() {
+            var vv = window.visualViewport;
+            var inset = 0;
+            if (vv) {
+                inset = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+            }
+            document.documentElement.style.setProperty('--vv-bottom-inset', inset + 'px');
+            try {
+                window.dispatchEvent(new CustomEvent('cafehop-viewport-resize'));
+            } catch (err) { /* ignore */ }
+        }
+
+        apply();
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', apply);
+            window.visualViewport.addEventListener('scroll', apply);
+        }
+        window.addEventListener('resize', apply);
+        window.addEventListener('orientationchange', function () {
+            window.setTimeout(apply, 100);
+        });
+    }
+
     function safeHttpUrl(url) {
         var s = String(url || '').trim();
         if (!s) return '';
@@ -400,6 +434,7 @@
         ensureSheet();
         keepStandaloneNavigation();
         watchChromeScrollCompact();
+        pinFixedChromeToVisualViewport();
         document.querySelectorAll('[data-watchlist-open]').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 openWatchlistSheet();

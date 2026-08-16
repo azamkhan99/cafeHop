@@ -28,6 +28,20 @@ html.in-browser {
     }
 }
 
+/*
+ * iOS Safari: pin fixed chrome to the visual viewport. Map/add lock html/body
+ * height, which leaves a dead band above the browser toolbar that gallery
+ * (document scroll) does not show.
+ */
+html.in-browser .chrome-footer {
+    bottom: var(--vv-bottom-inset, 0px);
+    padding-bottom: 6px;
+}
+
+html.in-browser body.has-chrome[data-chrome-page="map"] .map-container.map-with-chrome {
+    bottom: var(--vv-bottom-inset, 0px);
+}
+
 html {
     height: 100%;
     /* iOS Safari: percentage heights on body resolve against the painted viewport */
