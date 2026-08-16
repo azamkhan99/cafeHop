@@ -37,7 +37,7 @@
             if (!quiet) setPasteStatus('Paste a Maps link first.', true);
             return Promise.resolve(false);
         }
-        if (!quiet) setPasteStatus('Looking up that place…');
+        if (!quiet) setPasteStatus('Looking up location…');
         var api = cafeApiUrl();
         if (!api) {
             if (!quiet) setPasteStatus('Cafe API is not configured', true);
@@ -321,9 +321,68 @@
         document.body.appendChild(footer);
     }
 
+    /** Keep same-origin page hops inside the iOS Home Screen standalone shell. */
+    function keepStandaloneNavigation() {
+        document.addEventListener('click', function (e) {
+            var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+            if (!a) return;
+            if (a.target && a.target !== '_self') return;
+            if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            var href = a.getAttribute('href');
+            if (!href || href.charAt(0) === '#' || href.indexOf('mailto:') === 0 || href.indexOf('tel:') === 0) return;
+            var url;
+            try {
+                url = new URL(href, location.href);
+            } catch (err) {
+                return;
+            }
+            if (url.origin !== location.origin) return;
+            if (url.pathname === location.pathname && url.search === location.search && url.hash) return;
+            e.preventDefault();
+            location.assign(url.href);
+        }, true);
+    }
+
+    /** Compact header + footer while scrolling down; expand again on scroll up. */
+    function watchChromeScrollCompact() {
+        if (!document.body.classList.contains('has-chrome')) return;
+        if (document.body.getAttribute('data-chrome-page') === 'map') return;
+
+        var lastY = window.scrollY || 0;
+        var ticking = false;
+        var compact = false;
+
+        function apply(next) {
+            if (next === compact) return;
+            compact = next;
+            document.body.classList.toggle('is-chrome-compact', compact);
+        }
+
+        function onScroll() {
+            if (ticking) return;
+            ticking = true;
+            window.requestAnimationFrame(function () {
+                ticking = false;
+                var y = window.scrollY || 0;
+                var delta = y - lastY;
+                lastY = y;
+                if (y < 24) {
+                    apply(false);
+                    return;
+                }
+                if (delta > 6) apply(true);
+                else if (delta < -6) apply(false);
+            });
+        }
+
+        window.addEventListener('scroll', onScroll, { passive: true });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         ensureChromeFooter();
         ensureSheet();
+        keepStandaloneNavigation();
+        watchChromeScrollCompact();
         document.querySelectorAll('[data-watchlist-open]').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 openWatchlistSheet();
